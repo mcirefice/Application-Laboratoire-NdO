@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratoire - Connexion</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-section h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .logo-section p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background-color: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            padding-right: 40px;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .error-message.show {
+            display: block;
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .info-text {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
+            }
+
+            .logo-section h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo-section">
+            <h1>🔬 Laboratoire</h1>
+            <p>Système de gestion d'équipe</p>
+        </div>
+
+        <div id="errorMessage" class="error-message">
+            Nom d'utilisateur ou code incorrect
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Nom d'utilisateur</label>
+                <select 
+                    id="username" 
+                    name="username" 
+                    required
+                >
+                    <option value="">-- Sélectionnez votre nom --</option>
+                    <option value="m.cirefice">m.cirefice</option>
+                    <option value="a.abidi">a.abidi</option>
+                    <option value="m.steuf">m.steuf</option>
+                    <option value="k.ovey">k.ovey</option>
+                    <option value="c.druot">c.druot</option>
+                    <option value="m.duponchel">m.duponchel</option>
+                    <option value="p.parisot">p.parisot</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Code d'accès</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    placeholder="Entrez votre code"
+                    required
+                    autocomplete="current-password"
+                >
+            </div>
+
+            <button type="submit" class="btn-login">
+                Se connecter
+            </button>
+        </form>
+
+        <p class="info-text">
+            Accès réservé aux membres de l'équipe et à l'intendant
+        </p>
+    </div>
+
+    <script>
+        // Fonction de hashage SHA-256
+        async function hashPassword(password) {
+            const msgBuffer = new TextEncoder().encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+
+        // Base de données des utilisateurs avec mots de passe hashés
+        // Les codes originaux : MC2024, AA2024, MS2024, KO2024, CD2024, MD2024, PP2024
+        const users = {
+            'm.cirefice': '8f6ec7399c60711e35b9051a190f867dec9072fcd097d9ab6f23e7fe2955ad2b',
+            'a.abidi': 'ef5a36ca66e6d323e2a0521169fe3e3a8b5452695abf87a4ec6b4f0f4b09bdfa',
+            'm.steuf': '4f89245fe5e0d0c4429cbbc7587ebb19a6bd0b22252ba7bd7cb76b3b043a9fb7',
+            'k.ovey': 'b49b0b5d2c80e955952feff090c320843d72be2d35c173d02708ab6e17e65015',
+            'c.druot': 'e2f0a238939b2dd9ae4357f4bd777d4a9a48a0bd886462b526fd04b60606bed6',
+            'm.duponchel': '30efe80096f05c95a695dfc5eeaa42cc93fb014fec61afd4f36d5f0134802f16',
+            'p.parisot': '2c866d3c9bd1bde6658a8164ceed15602e442abdcc89cf4f16b5251217a4b5c0'
+        };
+
+        const loginForm = document.getElementById('loginForm');
+        const errorMessage = document.getElementById('errorMessage');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = usernameInput.value;
+            const password = passwordInput.value;
+
+            // Vérifier que l'utilisateur a sélectionné un nom
+            if (!username) {
+                errorMessage.textContent = 'Veuillez sélectionner un nom d\'utilisateur';
+                errorMessage.classList.add('show');
+                setTimeout(() => {
+                    errorMessage.classList.remove('show');
+                }, 3000);
+                return;
+            }
+
+            // Hash du mot de passe saisi
+            const hashedPassword = await hashPassword(password);
+
+            // Vérification des identifiants
+            if (users[username] && users[username] === hashedPassword) {
+                // Connexion réussie
+                localStorage.setItem('loggedUser', username);
+                localStorage.setItem('loginTime', new Date().toISOString());
+                
+                // Animation de succès
+                loginForm.style.opacity = '0';
+                setTimeout(() => {
+                    // Rediriger vers le tableau de bord
+                    window.location.href = 'dashboard.html';
+                }, 300);
+            } else {
+                // Afficher l'erreur
+                errorMessage.textContent = 'Code d\'accès incorrect';
+                errorMessage.classList.add('show');
+                passwordInput.value = '';
+                
+                // Masquer l'erreur après 3 secondes
+                setTimeout(() => {
+                    errorMessage.classList.remove('show');
+                }, 3000);
+            }
+        });
+
+        // Vérifier si l'utilisateur est déjà connecté
+        window.addEventListener('load', function() {
+            const loggedUser = localStorage.getItem('loggedUser');
+            if (loggedUser) {
+                // Rediriger automatiquement si déjà connecté
+                window.location.href = 'dashboard.html';
+            }
+        });
+    </script>
+</body>
+</html>

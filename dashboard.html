@@ -1585,6 +1585,16 @@
             color: '#f97316',
             unit: 'bidons',
             maxCapacity: 12
+        },
+        'Solide Organique': {
+            color: '#84cc16',
+            unit: 'boîtes',
+            maxCapacity: 6
+        },
+        'Filtre de Hotte': {
+            color: '#64748b',
+            unit: 'filtres',
+            maxCapacity: 10
         }
     };
     
@@ -1599,6 +1609,40 @@
     
     // Fonction pour afficher un pictogramme depuis les fichiers PNG
     function displayPictogram(code, size = 40) {
+        // Pictogrammes SVG intégrés pour les types spéciaux
+        if (code === 'BIOHAZARD') {
+            return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;">
+                <circle cx="50" cy="50" r="48" fill="#f97316" stroke="#ea580c" stroke-width="2"/>
+                <text x="50" y="62" text-anchor="middle" font-size="52" fill="white">☣</text>
+            </svg>`;
+        }
+        if (code === 'BOTTLES') {
+            return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;">
+                <circle cx="50" cy="50" r="48" fill="#8b5cf6" stroke="#7c3aed" stroke-width="2"/>
+                <text x="50" y="65" text-anchor="middle" font-size="48" fill="white">🧴</text>
+            </svg>`;
+        }
+        if (code === 'SOLID_ORGANIC') {
+            return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;">
+                <circle cx="50" cy="50" r="48" fill="#84cc16" stroke="#65a30d" stroke-width="2"/>
+                <text x="50" y="65" text-anchor="middle" font-size="46" fill="white">🧪</text>
+            </svg>`;
+        }
+        if (code === 'HOTTE_FILTER') {
+            return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;">
+                <circle cx="50" cy="50" r="48" fill="#64748b" stroke="#475569" stroke-width="2"/>
+                <!-- Filtre de hotte : grille + flèches air -->
+                <rect x="20" y="30" width="60" height="40" rx="4" fill="none" stroke="white" stroke-width="4"/>
+                <line x1="33" y1="30" x2="33" y2="70" stroke="white" stroke-width="3"/>
+                <line x1="47" y1="30" x2="47" y2="70" stroke="white" stroke-width="3"/>
+                <line x1="61" y1="30" x2="61" y2="70" stroke="white" stroke-width="3"/>
+                <line x1="20" y1="44" x2="80" y2="44" stroke="white" stroke-width="3"/>
+                <line x1="20" y1="57" x2="80" y2="57" stroke="white" stroke-width="3"/>
+                <!-- Flèche montante -->
+                <line x1="50" y1="18" x2="50" y2="8" stroke="white" stroke-width="3"/>
+                <polygon points="50,4 45,12 55,12" fill="white"/>
+            </svg>`;
+        }
         return `<img src="${code}.png" alt="${code}" style="width: ${size}px; height: ${size}px; display: inline-block; vertical-align: middle;" onerror="this.style.display='none'">`;
     }
 
@@ -1688,7 +1732,7 @@
                 const quantite = parseInt(cleanValues[1]) || 0;
                 const seuil = parseInt(cleanValues[2]) || 0;
                 // Pictogrammes peuvent être multiples, séparés par des espaces
-                const pictogrammes = cleanValues[3] ? cleanValues[3].split(' ').filter(p => p) : [];
+                const pictogrammes = cleanValues[3] ? cleanValues[3].toUpperCase().split(' ').filter(p => p) : [];
                 data[filiere] = {
                     current: quantite,
                     threshold: seuil,
@@ -1703,12 +1747,14 @@
     function displayDemoWasteData() {
         // Données de démonstration avec les VRAIES valeurs actuelles et pictogrammes multiples
         wasteData = {
-            'Jaune - Acides': { current: 10, threshold: 15, pictograms: ['SGH05', 'SGH09'] },
-            'Vert - Bases': { current: 8, threshold: 15, pictograms: ['SGH05', 'SGH09'] },
-            'Rouge - Solvant non halogéné': { current: 3, threshold: 5, pictograms: ['SGH02', 'SGH07'] },
+            'Jaune - Acides': { current: 15, threshold: 15, pictograms: ['SGH05', 'SGH09'] },
+            'Vert - Bases': { current: 10, threshold: 15, pictograms: ['SGH05', 'SGH09'] },
+            'Rouge - Solvant non halogéné': { current: 2, threshold: 5, pictograms: ['SGH02', 'SGH07'] },
             'Rouge X - Solvant halogéné': { current: 2, threshold: 5, pictograms: ['SGH02', 'SGH07', 'SGH08'] },
-            'PCL - Petit Contenant': { current: 12, threshold: 20, pictograms: ['BOTTLES'] },
-            'Bidons biologiques': { current: 2, threshold: 6, pictograms: ['BIOHAZARD'] }
+            'PCL - Petit Contenant': { current: 2, threshold: 20, pictograms: ['BOTTLES'] },
+            'Bidons biologiques': { current: 2, threshold: 6, pictograms: ['BIOHAZARD'] },
+            'Solide Organique': { current: 1, threshold: 3, pictograms: ['SGH02', 'SGH07', 'SGH08'] },
+            'Filtre de Hotte': { current: 5, threshold: 5, pictograms: ['HOTTE_FILTER'] }
         };
         
         document.getElementById('wasteContainer').style.display = 'block';

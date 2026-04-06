@@ -1600,22 +1600,16 @@
     
     // Pictogrammes SGH en Unicode/Emoji
     const sghPictograms = {
-        'SGH02': '🔥', // Inflammable
-        'SGH05': '⚗️', // Corrosif
-        'SGH07': '☠️', // Toxique
-        'SGH08': '🦠', // Danger pour la santé
-        'SGH09': '🐟'  // Environnement
+        'sgh02': '🔥', // Inflammable
+        'sgh05': '⚗️', // Corrosif
+        'sgh07': '☠️', // Toxique
+        'sgh08': '🦠', // Danger pour la santé
+        'sgh09': '🐟'  // Environnement
     };
     
     // Fonction pour afficher un pictogramme depuis les fichiers PNG
     function displayPictogram(code, size = 40) {
         // Pictogrammes SVG intégrés pour les types spéciaux
-        if (code === 'BIOHAZARD') {
-            return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;">
-                <circle cx="50" cy="50" r="48" fill="#f97316" stroke="#ea580c" stroke-width="2"/>
-                <text x="50" y="62" text-anchor="middle" font-size="52" fill="white">☣</text>
-            </svg>`;
-        }
         if (code === 'BOTTLES') {
             return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;">
                 <circle cx="50" cy="50" r="48" fill="#8b5cf6" stroke="#7c3aed" stroke-width="2"/>
@@ -1732,7 +1726,7 @@
                 const quantite = parseInt(cleanValues[1]) || 0;
                 const seuil = parseInt(cleanValues[2]) || 0;
                 // Pictogrammes peuvent être multiples, séparés par des espaces
-                const pictogrammes = cleanValues[3] ? cleanValues[3].toUpperCase().split(' ').filter(p => p) : [];
+                const pictogrammes = cleanValues[3] ? cleanValues[3].toLowerCase().split(' ').filter(p => p) : [];
                 data[filiere] = {
                     current: quantite,
                     threshold: seuil,
@@ -1747,13 +1741,13 @@
     function displayDemoWasteData() {
         // Données de démonstration avec les VRAIES valeurs actuelles et pictogrammes multiples
         wasteData = {
-            'Jaune - Acides': { current: 15, threshold: 15, pictograms: ['SGH05', 'SGH09'] },
-            'Vert - Bases': { current: 10, threshold: 15, pictograms: ['SGH05', 'SGH09'] },
-            'Rouge - Solvant non halogéné': { current: 2, threshold: 5, pictograms: ['SGH02', 'SGH07'] },
-            'Rouge X - Solvant halogéné': { current: 2, threshold: 5, pictograms: ['SGH02', 'SGH07', 'SGH08'] },
+            'Jaune - Acides': { current: 15, threshold: 15, pictograms: ['sgh05', 'sgh09'] },
+            'Vert - Bases': { current: 10, threshold: 15, pictograms: ['sgh05', 'sgh09'] },
+            'Rouge - Solvant non halogéné': { current: 2, threshold: 5, pictograms: ['sgh02', 'sgh07'] },
+            'Rouge X - Solvant halogéné': { current: 2, threshold: 5, pictograms: ['sgh02', 'sgh07', 'sgh08'] },
             'PCL - Petit Contenant': { current: 2, threshold: 20, pictograms: ['BOTTLES'] },
-            'Bidons biologiques': { current: 2, threshold: 6, pictograms: ['BIOHAZARD'] },
-            'Solide Organique': { current: 1, threshold: 3, pictograms: ['SGH02', 'SGH07', 'SGH08'] },
+            'Bidons biologiques': { current: 2, threshold: 6, pictograms: ['biohazard'] },
+            'Solide Organique': { current: 1, threshold: 3, pictograms: ['sgh02', 'sgh07', 'sgh08'] },
             'Filtre de Hotte': { current: 5, threshold: 5, pictograms: ['HOTTE_FILTER'] }
         };
         

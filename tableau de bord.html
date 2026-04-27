@@ -1734,6 +1734,19 @@
         displayWasteCharts();
     }
 
+    function normalizeKey(str) {
+        return str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    }
+
+    function findWasteData(type) {
+        if (wasteData[type]) return wasteData[type];
+        const normType = normalizeKey(type);
+        for (const key of Object.keys(wasteData)) {
+            if (normalizeKey(key) === normType) return wasteData[key];
+        }
+        return { current: 0, threshold: 0, pictograms: [] };
+    }
+
     function displayWasteCharts() {
         const container = document.getElementById('wasteCharts');
         const alertsContainer = document.getElementById('wasteAlerts');
@@ -1752,7 +1765,7 @@
         
         Object.keys(wasteTypes).forEach(type => {
             const config = wasteTypes[type];
-            const data = wasteData[type] || { current: 0, threshold: 0, pictograms: [] };
+            const data = findWasteData(type);
             const current = data.current;
             const threshold = data.threshold;
             const pictograms = data.pictograms || [];

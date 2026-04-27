@@ -1,0 +1,2516 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratoire - Tableau de bord</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* En-tête */
+        .header {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 20px 25px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Ligne 1 : logos + titre */
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header-left img {
+            height: 55px;
+            object-fit: contain;
+        }
+
+        .header-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            flex: 1;
+        }
+
+        .header-center h1 {
+            color: #667eea;
+            font-size: 26px;
+            margin: 0;
+        }
+
+        .header-center p {
+            color: #666;
+            font-size: 13px;
+            margin: 4px 0 0 0;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header-right img {
+            height: 55px;
+            object-fit: contain;
+        }
+
+        /* Ligne 2 : utilisateur + déconnexion */
+        .user-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 10px 0 2px;
+            border-top: 1px solid #f0f0f0;
+            flex-wrap: wrap;
+        }
+
+        .user-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 7px 18px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .btn-logout {
+            background: #fff;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 7px 18px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-logout:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Navigation par onglets */
+        .tabs-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .tabs-nav {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 20px;
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .tab-button:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            background: white;
+        }
+
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .tab-content {
+            padding: 40px;
+            min-height: 400px;
+        }
+
+        .content-section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Style des cartes de contenu */
+        .info-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px dashed #667eea;
+        }
+
+        .info-card h2 {
+            color: #667eea;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .info-card p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .coming-soon {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 15px;
+        }
+
+        .category-btn {
+            padding: 12px 24px;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .category-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .category-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        /* ── Grille de tuiles ── */
+        .prep-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 14px;
+        }
+
+        .prep-tile {
+            background: white;
+            border: 2px solid #e8eaf6;
+            border-radius: 14px;
+            padding: 16px 12px 14px;
+            cursor: pointer;
+            transition: all 0.22s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            text-align: center;
+            min-height: 110px;
+            justify-content: center;
+        }
+
+        .prep-tile:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 16px rgba(102,126,234,0.18);
+            transform: translateY(-3px);
+        }
+
+        .prep-tile-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #333;
+            line-height: 1.3;
+        }
+
+        .prep-tile-pictos {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            justify-content: center;
+        }
+
+        .prep-tile-pictos img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+
+        /* ── Modal ── */
+        .prep-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .prep-modal-overlay.open {
+            display: flex;
+        }
+
+        .prep-modal {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 88vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: modalIn 0.22s ease;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.93) translateY(20px); }
+            to   { opacity: 1; transform: scale(1)   translateY(0);     }
+        }
+
+        .prep-modal-header {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px 24px 16px;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .prep-modal-title {
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.3;
+            flex: 1;
+        }
+
+        .prep-modal-close {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .prep-modal-close:hover {
+            background: rgba(255,255,255,0.35);
+        }
+
+        .prep-modal-pictos {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 14px 24px 0;
+        }
+
+        .prep-modal-pictos img {
+            width: 56px;
+            height: 56px;
+            object-fit: contain;
+        }
+
+        .prep-modal-body {
+            padding: 20px 24px 28px;
+        }
+
+        .prep-modal-section {
+            margin-bottom: 20px;
+        }
+
+        .prep-modal-section-title {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .prep-modal-section-content {
+            color: #444;
+            line-height: 1.8;
+            white-space: pre-line;
+            font-size: 15px;
+        }
+
+        .prep-modal-protocol {
+            background: #f4f5ff;
+            border-left: 4px solid #667eea;
+            border-radius: 0 10px 10px 0;
+            padding: 14px 16px;
+        }
+
+        .prep-modal-protocol ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .prep-modal-protocol li {
+            color: #444;
+            line-height: 1.8;
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .prep-modal-category {
+            display: inline-block;
+            background: #f0f0ff;
+            color: #667eea;
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .prep-card { display: none; }
+        
+        .prep-protocol ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .prep-protocol li {
+            margin: 8px 0;
+            color: #444;
+            line-height: 1.6;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .header {
+                padding: 15px;
+                gap: 10px;
+            }
+
+            .header-top {
+                gap: 10px;
+            }
+
+            .header-left img,
+            .header-right img {
+                height: 40px;
+            }
+
+            .header-center h1 {
+                font-size: 18px;
+            }
+
+            .header-center p {
+                font-size: 11px;
+            }
+
+            .tabs-nav {
+                flex-direction: column;
+            }
+
+            .tab-button {
+                border-bottom: 1px solid #e0e0e0;
+                padding: 14px;
+                font-size: 14px;
+            }
+
+            .tab-button.active::after {
+                left: 50%;
+                right: auto;
+                width: 60px;
+                transform: translateX(-50%);
+            }
+
+            .tab-content {
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .header-center h1 {
+                font-size: 15px;
+            }
+            .header-left img,
+            .header-right img {
+                height: 32px;
+            }
+            .user-badge, .btn-logout {
+                font-size: 13px;
+                padding: 6px 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- En-tête -->
+        <div class="header">
+            <!-- Ligne 1 : logos + titre -->
+            <div class="header-top">
+                <div class="header-left">
+                    <img src="logo-notre-dame.png" alt="Notre-Dame Les Oiseaux">
+                </div>
+                <div class="header-center">
+                    <div>
+                        <h1>🔬 Laboratoire</h1>
+                        <p>Tableau de bord - Gestion d'équipe</p>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <img src="logo-ndo-sup.png" alt="NDO Sup">
+                </div>
+            </div>
+            <!-- Ligne 2 : utilisateur + déconnexion (toujours centré et visible) -->
+            <div class="user-info">
+                <span class="user-badge" id="userBadge">Utilisateur</span>
+                <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
+            </div>
+        </div>
+
+        <!-- Onglets -->
+        <div class="tabs-container">
+            <div class="tabs-nav">
+                <button class="tab-button active" onclick="switchTab(0)">
+                    ♻️ Gestion des Déchets
+                </button>
+                <button class="tab-button" onclick="switchTab(1)">
+                    🧪 Préparation TP
+                </button>
+                <button class="tab-button" onclick="switchTab(2)">
+                    📚 Préparations Particulières
+                </button>
+                <button class="tab-button" onclick="switchTab(3)">
+                    🔭 Conversions Optiques
+                </button>
+                <button class="tab-button" onclick="switchTab(4)">
+                    📋 Onglet 5
+                </button>
+                <button class="tab-button" onclick="switchTab(5)">
+                    📋 Onglet 6
+                </button>
+            </div>
+
+            <div class="tab-content">
+                <!-- Contenu Onglet 1 - Gestion des Déchets -->
+                <div class="content-section active" id="section0">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <h2 style="color: #667eea; margin: 0;">♻️ Gestion des Déchets Chimiques</h2>
+                            <p id="lastUpdateWaste" style="color: #999; font-size: 12px; margin: 5px 0 0 0;">
+                                🔄 Rafraîchissement automatique toutes les 30s
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn-refresh-waste" onclick="refreshWasteData()">
+                                🔄 Actualiser
+                            </button>
+                            <button class="btn-edit-waste" onclick="openWasteSheet()">
+                                ✏️ Modifier les stocks
+                            </button>
+                        </div>
+                    </div>
+
+                    <p style="color: #666; margin-bottom: 30px; text-align: center;">
+                        Suivi en temps réel des déchets chimiques. Les bidons sont de 5L (PCL en boîtes).
+                    </p>
+
+                    <!-- Message de chargement -->
+                    <div id="loadingWaste" class="loading-message">
+                        <div class="spinner"></div>
+                        <p>Chargement des données...</p>
+                    </div>
+
+                    <!-- Message d'erreur -->
+                    <div id="wasteConfigError" class="error-message-box" style="display: none;">
+                        <h4>⚙️ Configuration nécessaire</h4>
+                        <p>Le Google Sheet des déchets n'est pas encore configuré.</p>
+                    </div>
+
+                    <!-- Conteneur des histogrammes -->
+                    <div id="wasteContainer" style="display: none;">
+                        <!-- Section alertes EN HAUT -->
+                        <div id="wasteAlerts" style="margin-bottom: 30px;"></div>
+
+                        <!-- Légende -->
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 30px; display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 20px; height: 20px; background: #667eea; border-radius: 4px;"></div>
+                                <span style="font-size: 14px; color: #333;">Stock actuel</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 20px; height: 3px; background: #ef4444; border-radius: 2px;"></div>
+                                <span style="font-size: 14px; color: #333;">Seuil d'alerte</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 20px; height: 20px; background: #fbbf24; border-radius: 4px;"></div>
+                                <span style="font-size: 14px; color: #333;">Alerte proche</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 20px; height: 20px; background: #ef4444; border-radius: 4px;"></div>
+                                <span style="font-size: 14px; color: #333;">Seuil atteint</span>
+                            </div>
+                        </div>
+
+                        <!-- Grille des histogrammes EN BAS -->
+                        <div id="wasteCharts" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px;">
+                        </div>
+                    </div>
+                </div>
+
+                <style>
+                    .btn-refresh-waste, .btn-edit-waste {
+                        padding: 10px 20px;
+                        border: none;
+                        border-radius: 10px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                    }
+
+                    .btn-refresh-waste {
+                        background: #f8f9fa;
+                        color: #667eea;
+                        border: 2px solid #667eea;
+                    }
+
+                    .btn-refresh-waste:hover {
+                        background: #667eea;
+                        color: white;
+                        transform: translateY(-2px);
+                    }
+
+                    .btn-edit-waste {
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                    }
+
+                    .btn-edit-waste:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                    }
+
+                    .waste-chart-card {
+                        background: white;
+                        border-radius: 15px;
+                        padding: 20px;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                        transition: transform 0.3s ease;
+                    }
+
+                    .waste-chart-card:hover {
+                        transform: translateY(-5px);
+                        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+                    }
+
+                    .waste-chart-card.alert {
+                        border: 3px solid #ef4444;
+                        animation: pulse 2s infinite;
+                    }
+
+                    @keyframes pulse {
+                        0%, 100% { box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+                        50% { box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4); }
+                    }
+
+                    .waste-header {
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                        margin-bottom: 15px;
+                    }
+
+                    .waste-color-dot {
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 50%;
+                        border: 2px solid #ddd;
+                    }
+
+                    .waste-title {
+                        font-size: 16px;
+                        font-weight: bold;
+                        color: #333;
+                        flex: 1;
+                    }
+
+                    .waste-value {
+                        font-size: 24px;
+                        font-weight: bold;
+                        color: #667eea;
+                        text-align: center;
+                        margin: 10px 0;
+                    }
+
+                    .waste-bar-container {
+                        position: relative;
+                        height: 200px;
+                        background: #f0f0f0;
+                        border-radius: 10px;
+                        overflow: hidden;
+                        margin: 15px 0;
+                    }
+
+                    .waste-bar {
+                        position: absolute;
+                        bottom: 0;
+                        width: 100%;
+                        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+                        transition: height 0.5s ease, background 0.3s ease;
+                        border-radius: 10px 10px 0 0;
+                    }
+
+                    .waste-bar.warning {
+                        background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+                    }
+
+                    .waste-bar.danger {
+                        background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+                    }
+
+                    .waste-threshold-line {
+                        position: absolute;
+                        width: 100%;
+                        height: 3px;
+                        background: #ef4444;
+                        left: 0;
+                        z-index: 10;
+                        box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+                    }
+
+                    .waste-threshold-label {
+                        position: absolute;
+                        right: 5px;
+                        background: #ef4444;
+                        color: white;
+                        padding: 2px 8px;
+                        border-radius: 4px;
+                        font-size: 11px;
+                        font-weight: bold;
+                        transform: translateY(-50%);
+                    }
+
+                    .waste-info {
+                        display: flex;
+                        justify-content: space-between;
+                        font-size: 12px;
+                        color: #666;
+                        margin-top: 10px;
+                    }
+
+                    .alert-banner {
+                        background: linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);
+                        border: 2px solid #f59e0b;
+                        border-radius: 15px;
+                        padding: 20px;
+                        margin-bottom: 20px;
+                    }
+
+                    .alert-banner.danger {
+                        background: linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%);
+                        border-color: #ef4444;
+                    }
+
+                    .alert-banner h3 {
+                        color: #92400e;
+                        margin-bottom: 10px;
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                    }
+
+                    .alert-banner.danger h3 {
+                        color: #7f1d1d;
+                    }
+
+                    .alert-list {
+                        list-style: none;
+                        padding: 0;
+                        margin: 10px 0 0 0;
+                    }
+
+                    .alert-list li {
+                        padding: 8px 0;
+                        color: #92400e;
+                        font-weight: 600;
+                    }
+
+                    .alert-banner.danger .alert-list li {
+                        color: #7f1d1d;
+                    }
+                </style>
+
+                <!-- Contenu Onglet 2 - Préparation TP -->
+<div class="content-section" id="section1">
+    <h2 style="color: #667eea; margin-bottom: 30px; text-align: center;">
+        🧪 Aide à la Préparation des TP
+    </h2>
+    
+    <div class="calculator-container">
+        <!-- Sélection du type de produit avec boutons -->
+        <div class="calc-card">
+            <h3>Type de produit chimique</h3>
+            <div class="button-group">
+                <button class="type-btn active" onclick="selectType('solide')">
+                    📦 Solide
+                </button>
+                <button class="type-btn" onclick="selectType('liquide')">
+                    💧 Liquide
+                </button>
+                <button class="type-btn" onclick="selectType('eauoxygenee')">
+                    🧴 Eau oxygénée (volumes)
+                </button>
+                <button class="type-btn" onclick="selectType('degre')">
+                    🌡️ Liquide (degré)
+                </button>
+            </div>
+        </div>
+
+        <!-- Formulaire pour SOLIDE -->
+        <div id="formSolide" class="calc-card">
+            <h3>📦 Calcul pour Solide</h3>
+            
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Nom du produit</label>
+                    <input type="text" id="nomProduitSolide" placeholder="Ex: NaCl">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Concentration souhaitée (mol/L)</label>
+                    <input type="number" id="concentrationSolide" placeholder="Ex: 0.1" step="0.001">
+                </div>
+                <div class="input-group">
+                    <label>Volume de solution (mL)</label>
+                    <input type="number" id="volumeSolide" placeholder="Ex: 500" step="1">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Masse molaire (g/mol)</label>
+                    <input type="number" id="masseMolaire" placeholder="Ex: 58.44" step="0.01">
+                </div>
+                <div class="input-group">
+                    <label>Pureté (%)</label>
+                    <input type="number" id="pureteSolide" placeholder="Ex: 99.5" step="0.1" value="100">
+                </div>
+            </div>
+
+            <button class="btn-calculate" onclick="calculateSolide()">
+                Calculer la masse à peser
+            </button>
+
+            <div id="resultSolide" class="result-box"></div>
+        </div>
+
+        <!-- Formulaire pour LIQUIDE -->
+        <div id="formLiquide" class="calc-card" style="display: none;">
+            <h3>💧 Calcul pour Liquide</h3>
+            
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Nom du produit</label>
+                    <input type="text" id="nomProduitLiquide" placeholder="Ex: Éthanol">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Concentration souhaitée (mol/L)</label>
+                    <input type="number" id="concentrationLiquide" placeholder="Ex: 0.5" step="0.001">
+                </div>
+                <div class="input-group">
+                    <label>Volume de solution (mL)</label>
+                    <input type="number" id="volumeLiquide" placeholder="Ex: 1000" step="1">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Masse molaire (g/mol)</label>
+                    <input type="number" id="masseMolaireLiquide" placeholder="Ex: 46.07" step="0.01">
+                </div>
+                <div class="input-group">
+                    <label>Densité (g/mL)</label>
+                    <input type="number" id="densite" placeholder="Ex: 0.789" step="0.001">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Pureté (%)</label>
+                    <input type="number" id="pureteLiquide" placeholder="Ex: 95" step="0.1" value="100">
+                </div>
+            </div>
+
+            <button class="btn-calculate" onclick="calculateLiquide()">
+                Calculer le volume à prélever
+            </button>
+
+            <div id="resultLiquide" class="result-box"></div>
+        </div>
+
+        <!-- Formulaire pour EAU OXYGENEE -->
+        <div id="formEauOxygenee" class="calc-card" style="display: none;">
+            <h3>🧴 Calcul pour Eau Oxygénée (en volumes)</h3>
+            
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Titre en volumes initial (Vol)</label>
+                    <input type="number" id="volumesInitial" placeholder="Ex: 110" step="1">
+                    <small style="color: #666;">1 volume = 0,3% H₂O₂</small>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Titre en volumes souhaité (Vol)</label>
+                    <input type="number" id="volumesFinal" placeholder="Ex: 10" step="1">
+                </div>
+                <div class="input-group">
+                    <label>Volume final de solution (mL)</label>
+                    <input type="number" id="volumeEauOxygenee" placeholder="Ex: 1000" step="1">
+                </div>
+            </div>
+
+            <button class="btn-calculate" onclick="calculateEauOxygenee()">
+                Calculer le volume à prélever
+            </button>
+
+            <div id="resultEauOxygenee" class="result-box"></div>
+        </div>
+
+        <!-- Formulaire pour LIQUIDE EN DEGRE -->
+        <div id="formDegre" class="calc-card" style="display: none;">
+            <h3>🌡️ Calcul pour Liquide en Degré (alcool)</h3>
+            
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Nom du produit</label>
+                    <input type="text" id="nomProduitDegre" placeholder="Ex: Éthanol">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Degré initial (°)</label>
+                    <input type="number" id="degreInitial" placeholder="Ex: 95" step="0.1">
+                    <small style="color: #666;">% volumique d'alcool</small>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Degré souhaité (°)</label>
+                    <input type="number" id="degreFinal" placeholder="Ex: 70" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label>Volume final de solution (mL)</label>
+                    <input type="number" id="volumeDegre" placeholder="Ex: 500" step="1">
+                </div>
+            </div>
+
+            <button class="btn-calculate" onclick="calculateDegre()">
+                Calculer le volume à prélever
+            </button>
+
+            <div id="resultDegre" class="result-box"></div>
+        </div>
+
+        <!-- Section PREPARATIONS PARTICULIERES -->
+    </div>
+</div>
+
+<style>
+    .loading-message {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .error-message-box {
+        background: #fff3cd;
+        border: 2px solid #ffc107;
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+
+    .error-message-box h4 {
+        color: #856404;
+        margin-bottom: 10px;
+    }
+
+    .error-message-box p {
+        color: #856404;
+        margin: 5px 0;
+    }
+
+    .error-message-box ol {
+        color: #856404;
+    }
+
+    .filter-btn {
+        padding: 8px 16px;
+        background: #f8f9fa;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        color: #666;
+        transition: all 0.3s ease;
+    }
+
+    .filter-btn:hover {
+        background: rgba(102, 126, 234, 0.1);
+        border-color: #667eea;
+    }
+
+    .filter-btn.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+
+    .preparation-card {
+        background: #f8f9fa;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .preparation-card:hover {
+        border-color: #667eea;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        transform: translateY(-2px);
+    }
+
+    .preparation-title {
+        color: #667eea;
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .preparation-category {
+        background: #667eea;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .preparation-section {
+        margin: 10px 0;
+    }
+
+    .preparation-section strong {
+        color: #333;
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .preparation-section p {
+        color: #666;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    .search-box {
+        margin-bottom: 20px;
+    }
+
+    .btn-add-preparation {
+        padding: 10px 20px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-add-preparation:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-refresh {
+        padding: 10px 20px;
+        background: #f8f9fa;
+        color: #667eea;
+        border: 2px solid #667eea;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-refresh:hover {
+        background: #667eea;
+        color: white;
+        transform: translateY(-2px);
+    }
+</style>
+
+<style>
+    .calculator-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .calc-card {
+        background: white;
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .calc-card h3 {
+        color: #667eea;
+        margin-bottom: 20px;
+        font-size: 20px;
+    }
+
+    /* Boutons de sélection de type */
+    .button-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+    }
+
+    .type-btn {
+        padding: 15px 20px;
+        background: #f8f9fa;
+        border: 2px solid #e0e0e0;
+        border-radius: 12px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: #666;
+        text-align: center;
+    }
+
+    .type-btn:hover {
+        background: rgba(102, 126, 234, 0.1);
+        border-color: #667eea;
+        transform: translateY(-2px);
+    }
+
+    .type-btn.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-color: #667eea;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .input-group label {
+        color: #333;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .input-group small {
+        font-size: 12px;
+        margin-top: -4px;
+    }
+
+    .input-group input {
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s ease;
+    }
+
+    .input-group input:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .btn-calculate {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 10px;
+        transition: transform 0.2s ease;
+    }
+
+    .btn-calculate:hover {
+        transform: translateY(-2px);
+    }
+
+    .result-box {
+        margin-top: 20px;
+        padding: 20px;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
+        display: none;
+    }
+
+    .result-box.show {
+        display: block;
+        animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .result-box h4 {
+        color: #667eea;
+        margin-bottom: 10px;
+        font-size: 18px;
+    }
+
+    .result-box p {
+        color: #333;
+        margin: 5px 0;
+        font-size: 16px;
+    }
+
+    .result-highlight {
+        font-size: 24px;
+        font-weight: bold;
+        color: #667eea;
+        margin: 15px 0;
+    }
+
+    @media (max-width: 600px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+        .button-group {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    // Fonction de sélection du type
+    function selectType(type) {
+        // Désactiver tous les boutons
+        document.querySelectorAll('.type-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Activer le bouton sélectionné
+        event.target.classList.add('active');
+        
+        // Cacher tous les formulaires
+        document.getElementById('formSolide').style.display = 'none';
+        document.getElementById('formLiquide').style.display = 'none';
+        document.getElementById('formEauOxygenee').style.display = 'none';
+        document.getElementById('formDegre').style.display = 'none';
+        
+        // Cacher tous les résultats
+        document.querySelectorAll('.result-box').forEach(box => {
+            box.classList.remove('show');
+        });
+        
+        // Afficher le formulaire correspondant
+        switch(type) {
+            case 'solide':
+                document.getElementById('formSolide').style.display = 'block';
+                break;
+            case 'liquide':
+                document.getElementById('formLiquide').style.display = 'block';
+                break;
+            case 'eauoxygenee':
+                document.getElementById('formEauOxygenee').style.display = 'block';
+                break;
+            case 'degre':
+                document.getElementById('formDegre').style.display = 'block';
+                break;
+        }
+    }
+
+    function calculateSolide() {
+        const nom = document.getElementById('nomProduitSolide').value;
+        const concentration = parseFloat(document.getElementById('concentrationSolide').value);
+        const volume = parseFloat(document.getElementById('volumeSolide').value);
+        const masseMolaire = parseFloat(document.getElementById('masseMolaire').value);
+        const purete = parseFloat(document.getElementById('pureteSolide').value) || 100;
+        
+        if (!nom || isNaN(concentration) || isNaN(volume) || isNaN(masseMolaire)) {
+            alert('Veuillez remplir tous les champs');
+            return;
+        }
+        
+        // Formule: m = (C × V × M) × (100 / pureté)
+        const volumeL = volume / 1000;
+        const masseTheorique = concentration * volumeL * masseMolaire;
+        const masseReelle = masseTheorique * (100 / purete);
+        
+        const resultBox = document.getElementById('resultSolide');
+        resultBox.innerHTML = `
+            <h4>✅ Résultat du calcul</h4>
+            <p><strong>Produit :</strong> ${nom}</p>
+            <p><strong>Concentration finale :</strong> ${concentration} mol/L</p>
+            <p><strong>Volume de solution :</strong> ${volume} mL</p>
+            <p><strong>Pureté du produit :</strong> ${purete}%</p>
+            <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+            <div class="result-highlight">
+                Masse à peser : ${masseReelle.toFixed(3)} g
+            </div>
+            ${purete < 100 ? `<p style="font-size: 13px; color: #666; margin-top: 5px;">
+                (Masse théorique pure : ${masseTheorique.toFixed(3)} g)
+            </p>` : ''}
+            <p style="font-size: 14px; color: #666; margin-top: 10px;">
+                💡 Peser ${masseReelle.toFixed(3)} g de ${nom} et compléter à ${volume} mL avec le solvant approprié.
+            </p>
+        `;
+        resultBox.classList.add('show');
+    }
+
+    function calculateLiquide() {
+        const nom = document.getElementById('nomProduitLiquide').value;
+        const concentration = parseFloat(document.getElementById('concentrationLiquide').value);
+        const volume = parseFloat(document.getElementById('volumeLiquide').value);
+        const masseMolaire = parseFloat(document.getElementById('masseMolaireLiquide').value);
+        const densite = parseFloat(document.getElementById('densite').value);
+        const purete = parseFloat(document.getElementById('pureteLiquide').value) || 100;
+        
+        if (!nom || isNaN(concentration) || isNaN(volume) || isNaN(masseMolaire) || isNaN(densite)) {
+            alert('Veuillez remplir tous les champs');
+            return;
+        }
+        
+        const volumeL = volume / 1000;
+        const masseTheorique = concentration * volumeL * masseMolaire;
+        const masseReelle = masseTheorique * (100 / purete);
+        const volumePrelevement = masseReelle / densite;
+        
+        const resultBox = document.getElementById('resultLiquide');
+        resultBox.innerHTML = `
+            <h4>✅ Résultat du calcul</h4>
+            <p><strong>Produit :</strong> ${nom}</p>
+            <p><strong>Concentration finale :</strong> ${concentration} mol/L</p>
+            <p><strong>Volume de solution :</strong> ${volume} mL</p>
+            <p><strong>Pureté du produit :</strong> ${purete}%</p>
+            <p><strong>Masse nécessaire :</strong> ${masseReelle.toFixed(3)} g</p>
+            <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+            <div class="result-highlight">
+                Volume à prélever : ${volumePrelevement.toFixed(2)} mL
+            </div>
+            ${purete < 100 ? `<p style="font-size: 13px; color: #666; margin-top: 5px;">
+                (Volume théorique si pur : ${(masseTheorique / densite).toFixed(2)} mL)
+            </p>` : ''}
+            <p style="font-size: 14px; color: #666; margin-top: 10px;">
+                💡 Prélever ${volumePrelevement.toFixed(2)} mL de ${nom} et compléter à ${volume} mL avec le solvant approprié.
+            </p>
+        `;
+        resultBox.classList.add('show');
+    }
+
+    function calculateEauOxygenee() {
+        const volumesInitial = parseFloat(document.getElementById('volumesInitial').value);
+        const volumesFinal = parseFloat(document.getElementById('volumesFinal').value);
+        const volumeSolution = parseFloat(document.getElementById('volumeEauOxygenee').value);
+        
+        if (isNaN(volumesInitial) || isNaN(volumesFinal) || isNaN(volumeSolution)) {
+            alert('Veuillez remplir tous les champs');
+            return;
+        }
+        
+        // Formule de dilution: C1 × V1 = C2 × V2
+        const volumePrelevement = (volumesFinal * volumeSolution) / volumesInitial;
+        const volumeEau = volumeSolution - volumePrelevement;
+        
+        // Conversion en % massique
+        const pourcentageInitial = (volumesInitial * 0.3).toFixed(1);
+        const pourcentageFinal = (volumesFinal * 0.3).toFixed(1);
+        
+        const resultBox = document.getElementById('resultEauOxygenee');
+        resultBox.innerHTML = `
+            <h4>✅ Résultat du calcul</h4>
+            <p><strong>Eau oxygénée initiale :</strong> ${volumesInitial} volumes (≈ ${pourcentageInitial}% H₂O₂)</p>
+            <p><strong>Solution finale souhaitée :</strong> ${volumesFinal} volumes (≈ ${pourcentageFinal}% H₂O₂)</p>
+            <p><strong>Volume final :</strong> ${volumeSolution} mL</p>
+            <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+            <div class="result-highlight">
+                Volume à prélever : ${volumePrelevement.toFixed(2)} mL
+            </div>
+            <p style="font-size: 14px; color: #666; margin-top: 10px;">
+                💡 Prélever ${volumePrelevement.toFixed(2)} mL d'eau oxygénée à ${volumesInitial} volumes<br>
+                et compléter avec ${volumeEau.toFixed(2)} mL d'eau distillée.
+            </p>
+        `;
+        resultBox.classList.add('show');
+    }
+
+    function calculateDegre() {
+        const nom = document.getElementById('nomProduitDegre').value;
+        const degreInitial = parseFloat(document.getElementById('degreInitial').value);
+        const degreFinal = parseFloat(document.getElementById('degreFinal').value);
+        const volumeSolution = parseFloat(document.getElementById('volumeDegre').value);
+        
+        if (!nom || isNaN(degreInitial) || isNaN(degreFinal) || isNaN(volumeSolution)) {
+            alert('Veuillez remplir tous les champs');
+            return;
+        }
+        
+        // Formule de dilution: C1 × V1 = C2 × V2
+        const volumePrelevement = (degreFinal * volumeSolution) / degreInitial;
+        const volumeEau = volumeSolution - volumePrelevement;
+        
+        const resultBox = document.getElementById('resultDegre');
+        resultBox.innerHTML = `
+            <h4>✅ Résultat du calcul</h4>
+            <p><strong>Produit :</strong> ${nom}</p>
+            <p><strong>Degré initial :</strong> ${degreInitial}°</p>
+            <p><strong>Degré souhaité :</strong> ${degreFinal}°</p>
+            <p><strong>Volume final :</strong> ${volumeSolution} mL</p>
+            <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+            <div class="result-highlight">
+                Volume à prélever : ${volumePrelevement.toFixed(2)} mL
+            </div>
+            <p style="font-size: 14px; color: #666; margin-top: 10px;">
+                💡 Prélever ${volumePrelevement.toFixed(2)} mL de ${nom} à ${degreInitial}°<br>
+                et compléter avec ${volumeEau.toFixed(2)} mL d'eau distillée pour obtenir ${volumeSolution} mL à ${degreFinal}°.
+            </p>
+        `;
+        resultBox.classList.add('show');
+    }
+
+    // ========== GESTION DES PREPARATIONS PARTICULIERES ==========
+    
+    // CONFIGURATION : ID du Google Sheet des préparations
+    const GOOGLE_SHEET_ID = '1Hwy94cpJxufLrDiB3fI5DD58LE1A0-2r2reu-ELZ_A0';
+    const SHEET_NAME = 'Préparations'; // Nom de l'onglet dans votre sheet
+    
+    let preparationsData = [];
+    let currentFilter = 'tous';
+
+    // Fonction pour ouvrir le Google Sheet
+    function openGoogleSheet() {
+        const sheetUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/edit`;
+        window.open(sheetUrl, '_blank');
+    }
+
+    // Fonction pour rafraîchir les données
+    function refreshPreparations() {
+        document.getElementById('preparationsContainer').style.display = 'none';
+        document.getElementById('loadingPreparations').style.display = 'block';
+        document.getElementById('loadingPreparations').innerHTML = `
+            <div class="spinner"></div>
+            <p>Rechargement des préparations...</p>
+        `;
+        
+        // Réinitialiser les filtres
+        currentFilter = 'tous';
+        document.getElementById('searchInput').value = '';
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.filter-btn').classList.add('active');
+        
+        // Recharger les données
+    }
+</script>
+
+<script>
+    // ========== GESTION DES DECHETS CHIMIQUES ==========
+    
+    // CONFIGURATION
+    const WASTE_SHEET_ID = '1avzZS66nXjCYw01re2kUevVuSZByHz9jrXrT8j7cNAY';
+    const WASTE_SHEET_NAME = 'Déchets';
+    
+    // Configuration des filières avec couleurs (seuils maintenant dans Google Sheet)
+    const wasteTypes = {
+        'Jaune - Acides': {
+            color: '#fbbf24',
+            unit: 'bidons',
+            maxCapacity: 25
+        },
+        'Vert - Bases': {
+            color: '#10b981',
+            unit: 'bidons',
+            maxCapacity: 25
+        },
+        'Rouge - Solvant non halogéné': {
+            color: '#ef4444',
+            unit: 'bidons',
+            maxCapacity: 10
+        },
+        'Rouge X - Solvant halogéné': {
+            color: '#dc2626',
+            unit: 'bidons',
+            maxCapacity: 10
+        },
+        'PCL - Petit Contenant': {
+            color: '#8b5cf6',
+            unit: 'boîtes',
+            maxCapacity: 30
+        },
+        'Bidons biologiques': {
+            color: '#f97316',
+            unit: 'bidons',
+            maxCapacity: 12
+        },
+        'Solide Organique': {
+            color: '#84cc16',
+            unit: 'boîtes',
+            maxCapacity: 6
+        },
+        'Filtre de Hotte': {
+            color: '#64748b',
+            unit: 'filtres',
+            maxCapacity: 20
+        }
+    };
+    
+    // Pictogrammes SGH en Unicode/Emoji
+    const sghPictograms = {
+        'sgh02': '🔥', // Inflammable
+        'sgh05': '⚗️', // Corrosif
+        'sgh07': '☠️', // Toxique
+        'sgh08': '🦠', // Danger pour la santé
+        'sgh09': '🐟'  // Environnement
+    };
+    
+    // Fonction pour afficher un pictogramme depuis les fichiers PNG
+    function displayPictogram(code, size = 40) {
+        // Tous les pictogrammes sont des fichiers PNG en minuscules
+        return `<img src="${code}.png" alt="${code}" style="width: ${size}px; height: ${size}px; display: inline-block; vertical-align: middle;" onerror="this.style.display='none'">`;
+    }
+
+    let wasteData = {};
+
+    function openWasteSheet() {
+        if (WASTE_SHEET_ID === 'VOTRE_SHEET_DECHETS_ID_ICI') {
+            alert('Le Google Sheet des déchets n\'est pas encore configuré.');
+            return;
+        }
+        const sheetUrl = `https://docs.google.com/spreadsheets/d/${WASTE_SHEET_ID}/edit`;
+        window.open(sheetUrl, '_blank');
+    }
+
+    function refreshWasteData() {
+        document.getElementById('wasteContainer').style.display = 'none';
+        document.getElementById('loadingWaste').style.display = 'block';
+        loadWasteData();
+    }
+
+    async function loadWasteData() {
+        console.log('=== DÉBUT CHARGEMENT DÉCHETS ===');
+        console.log('WASTE_SHEET_ID:', WASTE_SHEET_ID);
+        console.log('WASTE_SHEET_NAME:', WASTE_SHEET_NAME);
+        
+        // Si pas configuré, afficher message
+        if (WASTE_SHEET_ID === 'VOTRE_SHEET_DECHETS_ID_ICI') {
+            console.log('Sheet ID non configuré, affichage démo');
+            document.getElementById('loadingWaste').style.display = 'none';
+            document.getElementById('wasteConfigError').style.display = 'block';
+            displayDemoWasteData();
+            return;
+        }
+
+        try {
+            const url = `https://docs.google.com/spreadsheets/d/${WASTE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${WASTE_SHEET_NAME}`;
+            console.log('URL de chargement:', url);
+            
+            const response = await fetch(url);
+            console.log('Réponse fetch:', response.status, response.statusText);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const csvText = await response.text();
+            console.log('CSV reçu (premières 200 caractères):', csvText.substring(0, 200));
+            
+            wasteData = parseWasteCSV(csvText);
+            console.log('Données parsées:', wasteData);
+            
+            document.getElementById('loadingWaste').style.display = 'none';
+            document.getElementById('wasteContainer').style.display = 'block';
+            displayWasteCharts();
+            
+            console.log('=== CHARGEMENT RÉUSSI ===');
+            
+        } catch (error) {
+            console.error('❌ ERREUR DE CHARGEMENT:', error);
+            console.error('Message d\'erreur:', error.message);
+            
+            document.getElementById('loadingWaste').innerHTML = `
+                <p style="color: #c33;">❌ Erreur de chargement des données</p>
+                <p style="font-size: 14px;">Erreur: ${error.message}</p>
+                <p style="font-size: 14px;">Affichage des données de démonstration</p>
+                <button onclick="loadWasteData()" style="margin-top: 10px; padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Réessayer</button>
+            `;
+            setTimeout(() => {
+                document.getElementById('loadingWaste').style.display = 'none';
+                displayDemoWasteData();
+            }, 3000);
+        }
+    }
+
+    function parseWasteCSV(csv) {
+        const lines = csv.split('\n');
+        const data = {};
+        
+        for (let i = 1; i < lines.length; i++) {
+            if (lines[i].trim() === '') continue;
+            
+            const values = lines[i].match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
+            const cleanValues = values.map(v => v.replace(/^"|"$/g, '').trim());
+            
+            if (cleanValues.length >= 3) {
+                const filiere = cleanValues[0];
+                const quantite = parseInt(cleanValues[1]) || 0;
+                const seuil = parseInt(cleanValues[2]) || 0;
+                // Pictogrammes peuvent être multiples, séparés par des espaces
+                const pictogrammes = cleanValues[3] ? cleanValues[3].toLowerCase().split(' ').filter(p => p) : [];
+                data[filiere] = {
+                    current: quantite,
+                    threshold: seuil,
+                    pictograms: pictogrammes
+                };
+            }
+        }
+        
+        return data;
+    }
+
+    function displayDemoWasteData() {
+        // Données de démonstration avec les VRAIES valeurs actuelles et pictogrammes multiples
+        wasteData = {
+            'Jaune - Acides': { current: 15, threshold: 15, pictograms: ['sgh05', 'sgh09'] },
+            'Vert - Bases': { current: 10, threshold: 15, pictograms: ['sgh05', 'sgh09'] },
+            'Rouge - Solvant non halogéné': { current: 2, threshold: 5, pictograms: ['sgh02', 'sgh07'] },
+            'Rouge X - Solvant halogéné': { current: 2, threshold: 5, pictograms: ['sgh02', 'sgh07', 'sgh08'] },
+            'PCL - Petit Contenant': { current: 2, threshold: 20, pictograms: ['bottles'] },
+            'Bidons biologiques': { current: 5, threshold: 7, pictograms: ['biohazard'] },
+            'Solide Organique': { current: 1, threshold: 3, pictograms: ['sgh02', 'sgh07', 'sgh08'] },
+            'Filtre de Hotte': { current: 5, threshold: 5, pictograms: ['hotte_filter'] }
+        };
+        
+        document.getElementById('wasteContainer').style.display = 'block';
+        displayWasteCharts();
+    }
+
+
+
+    function displayWasteCharts() {
+        const container = document.getElementById('wasteCharts');
+        const alertsContainer = document.getElementById('wasteAlerts');
+        
+        // Mettre à jour l'heure de dernière mise à jour
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const lastUpdateEl = document.getElementById('lastUpdateWaste');
+        if (lastUpdateEl) {
+            lastUpdateEl.innerHTML = `🔄 Rafraîchissement auto toutes les 30s | Dernière mise à jour : ${timeStr}`;
+        }
+        
+        let html = '';
+        let dangerAlerts = [];
+        let warningAlerts = [];
+        
+        Object.keys(wasteTypes).forEach(type => {
+            const config = wasteTypes[type];
+            const data = wasteData[type] || { current: 0, threshold: 0, pictograms: [] };
+            const current = data.current;
+            const threshold = data.threshold;
+            const pictograms = data.pictograms || [];
+            const maxCapacity = config.maxCapacity;
+            
+            // Générer les pictogrammes depuis les fichiers PNG
+            let pictogramsHTML = '';
+            pictograms.forEach(code => {
+                pictogramsHTML += displayPictogram(code, 40);
+            });
+            
+            // Calcul du pourcentage pour la barre
+            const percentage = (current / maxCapacity) * 100;
+            const thresholdPercentage = (threshold / maxCapacity) * 100;
+            
+            // Déterminer l'état
+            let barClass = '';
+            let cardClass = '';
+            if (current >= threshold) {
+                barClass = 'danger';
+                cardClass = 'alert';
+                dangerAlerts.push(type);
+            } else if (current >= threshold * 0.8) {
+                barClass = 'warning';
+                warningAlerts.push(type);
+            }
+            
+            html += `
+                <div class="waste-chart-card ${cardClass}">
+                    <div class="waste-header">
+                        <div class="waste-color-dot" style="background-color: ${config.color};"></div>
+                        <div class="waste-title">${type}</div>
+                        <div style="margin-left: auto; display: flex; gap: 5px; align-items: center;">${pictogramsHTML}</div>
+                    </div>
+                    
+                    <div class="waste-value">
+                        ${current} ${config.unit}
+                    </div>
+                    
+                    <div class="waste-bar-container">
+                        <div class="waste-threshold-line" style="bottom: ${thresholdPercentage}%;">
+                            <span class="waste-threshold-label">Seuil: ${threshold}</span>
+                        </div>
+                        <div class="waste-bar ${barClass}" style="height: ${percentage}%;"></div>
+                    </div>
+                    
+                    <div class="waste-info">
+                        <span>Actuel: ${current}</span>
+                        <span>Seuil: ${threshold}</span>
+                        <span>Max: ${maxCapacity}</span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        
+        // Afficher les alertes
+        let alertsHtml = '';
+        
+        if (dangerAlerts.length > 0) {
+            alertsHtml += `
+                <div class="alert-banner danger">
+                    <h3>🚨 ALERTE - Retrait nécessaire</h3>
+                    <p style="color: #7f1d1d; margin: 10px 0;">Les filières suivantes ont atteint le seuil de retrait :</p>
+                    <ul class="alert-list">
+                        ${dangerAlerts.map(type => `<li>• ${type}</li>`).join('')}
+                    </ul>
+                    <p style="color: #7f1d1d; margin-top: 15px; font-weight: bold;">
+                        ⚠️ Contacter la société de collecte des déchets
+                    </p>
+                </div>
+            `;
+        }
+        
+        if (warningAlerts.length > 0) {
+            alertsHtml += `
+                <div class="alert-banner">
+                    <h3>⚠️ Attention - Seuil proche</h3>
+                    <p style="color: #92400e; margin: 10px 0;">Les filières suivantes approchent du seuil :</p>
+                    <ul class="alert-list">
+                        ${warningAlerts.map(type => `<li>• ${type}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+        
+        if (dangerAlerts.length === 0 && warningAlerts.length === 0) {
+            alertsHtml = `
+                <div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 15px; padding: 20px; text-align: center;">
+                    <h3 style="color: #065f46; margin-bottom: 10px;">✅ Situation normale</h3>
+                    <p style="color: #065f46;">Tous les stocks de déchets sont sous les seuils d'alerte.</p>
+                </div>
+            `;
+        }
+        
+        alertsContainer.innerHTML = alertsHtml;
+    }
+
+    // Charger les données au chargement de l'onglet
+    // (sera appelé automatiquement quand on clique sur l'onglet)
+    
+    // Variable pour stocker l'intervalle de rafraîchissement
+    let wasteRefreshInterval = null;
+    
+    // Fonction pour démarrer le rafraîchissement automatique
+    function startWasteAutoRefresh() {
+        // Arrêter l'ancien intervalle s'il existe
+        if (wasteRefreshInterval) {
+            clearInterval(wasteRefreshInterval);
+        }
+        
+        // Rafraîchir toutes les 30 secondes
+        wasteRefreshInterval = setInterval(() => {
+            loadWasteData();
+        }, 30000); // 30 secondes
+    }
+    
+    // Fonction pour arrêter le rafraîchissement automatique
+    function stopWasteAutoRefresh() {
+        if (wasteRefreshInterval) {
+            clearInterval(wasteRefreshInterval);
+            wasteRefreshInterval = null;
+        }
+    }
+</script>
+
+                <!-- Contenu Onglet 3 - Préparations Particulières -->
+                <div class="content-section" id="section2">
+                    <h2 style="color: #667eea; margin-bottom: 20px; text-align: center;">
+                        📚 Préparations Particulières
+                    </h2>
+                    
+                    <div style="max-width: 800px; margin: 0 auto 20px;">
+                        <div style="position: relative;">
+                            <input 
+                                type="text" 
+                                id="globalSearchInput" 
+                                placeholder="🔍 Rechercher dans toutes les préparations..." 
+                                style="width: 100%; padding: 15px 20px; border: 2px solid #667eea; border-radius: 10px; font-size: 16px;"
+                                oninput="globalSearchPreparations()"
+                            >
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; flex-wrap: wrap; gap: 8px;">
+                            <div id="searchResultsCount" style="color: #666; font-size: 14px;"></div>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button onclick="loadAllPreparations()" class="btn-refresh">
+                                    🔄 Rafraîchir
+                                </button>
+                                <button onclick="openNewPreparationSheet()" class="btn-add-preparation">
+                                    ➕ Nouvelle préparation
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 30px;">
+                        <button class="category-btn active" onclick="selectCategory('Tampons')">🧪 Tampons</button>
+                        <button class="category-btn" onclick="selectCategory('Indicateurs colorés')">🎨 Indicateurs</button>
+                        <button class="category-btn" onclick="selectCategory('Tests identification')">🔬 Tests</button>
+                        <button class="category-btn" onclick="selectCategory('Éluants CCM')">📊 Éluants CCM</button>
+                        <button class="category-btn" onclick="selectCategory('Révélateurs CCM')">🖼️ Révélateurs CCM</button>
+                        <button class="category-btn" onclick="selectCategory('Autres')">📋 Autres</button>
+                    </div>
+
+                    <div id="preparationsContainer" style="max-width: 1000px; margin: 0 auto;">
+                        <p style="text-align: center; color: #999;">Chargement des préparations...</p>
+                    </div>
+                </div>
+
+                <!-- Contenu Onglet 4 - Conversions Optiques -->
+                <div class="content-section" id="section3">
+                    <h2 style="color: #667eea; margin-bottom: 30px; text-align: center;">🔭 Conversions Optiques & Unités</h2>
+
+                    <div class="calculator-container">
+
+                        <!-- SECTION 1 : Optique / Dioptries -->
+                        <div class="calc-card">
+                            <h3>🔬 Distance focale ↔ Dioptries</h3>
+                            <p style="color:#666; font-size:14px; margin-bottom:20px;">
+                                Relation : <strong>D (dioptries) = 1 / f (mètres)</strong> &nbsp;|&nbsp; 
+                                Centidioptries : +200 cD = +2,00 D &nbsp;|&nbsp; négatif = lentille divergente
+                            </p>
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label>Distance focale f (m)</label>
+                                    <input type="number" id="focalMetres" placeholder="Ex: 0.5" step="0.001" oninput="convertFocal('f_to_d')">
+                                </div>
+                                <div class="input-group">
+                                    <label>Vergence / Dioptries (D)</label>
+                                    <input type="number" id="dioptries" placeholder="Ex: 2.00" step="0.01" oninput="convertFocal('d_to_f')">
+                                </div>
+                                <div class="input-group">
+                                    <label>Centidioptries (cD)</label>
+                                    <input type="number" id="centidioptries" placeholder="Ex: +200 ou -300" step="1" oninput="convertFocal('cd_to_f')">
+                                </div>
+                            </div>
+                            <div id="resultFocal" class="result-box" style="margin-top:10px;"></div>
+                        </div>
+
+                        <!-- SECTION 2 : Longueur d'onde / Fréquence -->
+                        <div class="calc-card">
+                            <h3>🌈 Longueur d'onde ↔ Fréquence</h3>
+                            <p style="color:#666; font-size:14px; margin-bottom:20px;">
+                                Relation : <strong>c = λ × ν</strong> &nbsp;|&nbsp; c = 3×10⁸ m/s (vitesse de la lumière)
+                            </p>
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label>Longueur d'onde λ</label>
+                                    <input type="number" id="lambdaValue" placeholder="Ex: 550" step="0.001" oninput="convertWave()">
+                                </div>
+                                <div class="input-group">
+                                    <label>Unité de λ</label>
+                                    <select id="lambdaUnit" onchange="convertWave()" style="padding:10px; border:2px solid #e0e0e0; border-radius:8px; font-size:14px;">
+                                        <option value="nm">nm (nanomètres)</option>
+                                        <option value="um">μm (micromètres)</option>
+                                        <option value="mm">mm (millimètres)</option>
+                                        <option value="m">m (mètres)</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Fréquence ν (Hz)</label>
+                                    <input type="number" id="freqValue" placeholder="Ex: 5.45e14" step="any" oninput="convertWaveBack()">
+                                </div>
+                            </div>
+                            <div id="resultWave" class="result-box" style="margin-top:10px;"></div>
+                        </div>
+
+                        <!-- SECTION 3 : Angles -->
+                        <div class="calc-card">
+                            <h3>📐 Degrés ↔ Radians</h3>
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label>Angle en degrés (°)</label>
+                                    <input type="number" id="angleDeg" placeholder="Ex: 45" step="0.001" oninput="convertAngle('deg')">
+                                </div>
+                                <div class="input-group">
+                                    <label>Angle en radians (rad)</label>
+                                    <input type="number" id="angleRad" placeholder="Ex: 0.785" step="0.0001" oninput="convertAngle('rad')">
+                                </div>
+                                <div class="input-group">
+                                    <label>Valeur remarquable</label>
+                                    <select id="angleNotable" onchange="applyNotableAngle()" style="padding:10px; border:2px solid #e0e0e0; border-radius:8px; font-size:14px;">
+                                        <option value="">— Choisir —</option>
+                                        <option value="0">0° = 0 rad</option>
+                                        <option value="30">30° = π/6</option>
+                                        <option value="45">45° = π/4</option>
+                                        <option value="60">60° = π/3</option>
+                                        <option value="90">90° = π/2</option>
+                                        <option value="180">180° = π</option>
+                                        <option value="270">270° = 3π/2</option>
+                                        <option value="360">360° = 2π</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="resultAngle" class="result-box" style="margin-top:10px;"></div>
+                        </div>
+
+                        <!-- SECTION 4 : Conversions de longueurs -->
+                        <div class="calc-card">
+                            <h3>📏 Conversions de longueurs</h3>
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label>Valeur à convertir</label>
+                                    <input type="number" id="lengthValue" placeholder="Ex: 550" step="any" oninput="convertLength()">
+                                </div>
+                                <div class="input-group">
+                                    <label>Unité source</label>
+                                    <select id="lengthFrom" onchange="convertLength()" style="padding:10px; border:2px solid #e0e0e0; border-radius:8px; font-size:14px;">
+                                        <option value="nm">nm (nanomètres)</option>
+                                        <option value="um">μm (micromètres)</option>
+                                        <option value="mm">mm (millimètres)</option>
+                                        <option value="cm">cm (centimètres)</option>
+                                        <option value="m" selected>m (mètres)</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Unité cible</label>
+                                    <select id="lengthTo" onchange="convertLength()" style="padding:10px; border:2px solid #e0e0e0; border-radius:8px; font-size:14px;">
+                                        <option value="nm">nm (nanomètres)</option>
+                                        <option value="um" selected>μm (micromètres)</option>
+                                        <option value="mm">mm (millimètres)</option>
+                                        <option value="cm">cm (centimètres)</option>
+                                        <option value="m">m (mètres)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="resultLength" class="result-box" style="margin-top:10px;"></div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Contenu Onglet 5 - Vide -->
+                <div class="content-section" id="section4">
+                    <div class="info-card">
+                        <h2>📋 Onglet 5</h2>
+                        <p>Section disponible pour extension future.</p>
+                        <span class="coming-soon">À configurer</span>
+                    </div>
+                </div>
+
+                <!-- Contenu Onglet 6 - Vide -->
+                <div class="content-section" id="section5">
+                    <div class="info-card">
+                        <h2>📋 Onglet 6</h2>
+                        <p>Section disponible pour extension future.</p>
+                        <span class="coming-soon">À configurer</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ========== CONVERSIONS OPTIQUES ==========
+
+    const C_LIGHT = 3e8; // vitesse de la lumière en m/s
+
+    // Facteurs de conversion vers les mètres
+    const lengthToMetres = { nm: 1e-9, um: 1e-6, mm: 1e-3, cm: 1e-2, m: 1 };
+
+    function convertFocal(direction) {
+        const fInput = document.getElementById('focalMetres');
+        const dInput = document.getElementById('dioptries');
+        const cdInput = document.getElementById('centidioptries');
+        let f, D, cD, html = '';
+
+        if (direction === 'f_to_d') {
+            f = parseFloat(fInput.value);
+            if (isNaN(f) || f === 0) { dInput.value = ''; cdInput.value = ''; return; }
+            D = 1 / f;
+            cD = Math.round(D * 100);
+            dInput.value = D.toFixed(4);
+            cdInput.value = cD;
+        } else if (direction === 'd_to_f') {
+            D = parseFloat(dInput.value);
+            if (isNaN(D) || D === 0) { fInput.value = ''; cdInput.value = ''; return; }
+            f = 1 / D;
+            cD = Math.round(D * 100);
+            fInput.value = f.toFixed(4);
+            cdInput.value = cD;
+        } else if (direction === 'cd_to_f') {
+            cD = parseFloat(cdInput.value);
+            if (isNaN(cD) || cD === 0) { fInput.value = ''; dInput.value = ''; return; }
+            D = cD / 100;
+            f = 1 / D;
+            dInput.value = D.toFixed(4);
+            fInput.value = f.toFixed(4);
+        }
+
+        const type = D > 0 ? '🔵 Lentille convergente' : '🔴 Lentille divergente';
+        const resultEl = document.getElementById('resultFocal');
+        resultEl.innerHTML = `
+            <h4>✅ Résultat</h4>
+            <p><strong>Distance focale :</strong> f = ${f.toFixed(4)} m</p>
+            <p><strong>Vergence :</strong> D = ${D.toFixed(4)} dioptries</p>
+            <p><strong>Centidioptries :</strong> ${cD > 0 ? '+' : ''}${cD} cD</p>
+            <div class="result-highlight">${type}</div>
+        `;
+        resultEl.classList.add('show');
+    }
+
+    function convertWave() {
+        const val = parseFloat(document.getElementById('lambdaValue').value);
+        const unit = document.getElementById('lambdaUnit').value;
+        if (isNaN(val) || val <= 0) { document.getElementById('freqValue').value = ''; return; }
+        const lambdaM = val * lengthToMetres[unit];
+        const freq = C_LIGHT / lambdaM;
+        document.getElementById('freqValue').value = freq.toExponential(4);
+        showWaveResult(lambdaM, freq);
+    }
+
+    function convertWaveBack() {
+        const freq = parseFloat(document.getElementById('freqValue').value);
+        if (isNaN(freq) || freq <= 0) { document.getElementById('lambdaValue').value = ''; return; }
+        const unit = document.getElementById('lambdaUnit').value;
+        const lambdaM = C_LIGHT / freq;
+        const lambdaDisplay = lambdaM / lengthToMetres[unit];
+        document.getElementById('lambdaValue').value = lambdaDisplay.toExponential(4);
+        showWaveResult(lambdaM, freq);
+    }
+
+    function showWaveResult(lambdaM, freq) {
+        // Domaine spectral
+        let domaine = '';
+        if (lambdaM < 1e-9) domaine = 'Rayons X / gamma';
+        else if (lambdaM < 380e-9) domaine = '🟣 Ultraviolet (UV)';
+        else if (lambdaM < 750e-9) domaine = '🌈 Visible';
+        else if (lambdaM < 1e-3) domaine = '🔴 Infrarouge (IR)';
+        else domaine = '📡 Micro-ondes / Radio';
+
+        const resultEl = document.getElementById('resultWave');
+        resultEl.innerHTML = `
+            <h4>✅ Résultat</h4>
+            <p><strong>λ :</strong> ${(lambdaM*1e9).toExponential(3)} nm = ${(lambdaM*1e6).toExponential(3)} μm = ${lambdaM.toExponential(3)} m</p>
+            <p><strong>Fréquence ν :</strong> ${freq.toExponential(4)} Hz = ${(freq/1e12).toFixed(3)} THz</p>
+            <div class="result-highlight">${domaine}</div>
+        `;
+        resultEl.classList.add('show');
+    }
+
+    function convertAngle(from) {
+        let deg, rad;
+        document.getElementById('angleNotable').value = '';
+        if (from === 'deg') {
+            deg = parseFloat(document.getElementById('angleDeg').value);
+            if (isNaN(deg)) { document.getElementById('angleRad').value = ''; return; }
+            rad = deg * Math.PI / 180;
+            document.getElementById('angleRad').value = rad.toFixed(6);
+        } else {
+            rad = parseFloat(document.getElementById('angleRad').value);
+            if (isNaN(rad)) { document.getElementById('angleDeg').value = ''; return; }
+            deg = rad * 180 / Math.PI;
+            document.getElementById('angleDeg').value = deg.toFixed(4);
+        }
+        const resultEl = document.getElementById('resultAngle');
+        resultEl.innerHTML = `
+            <h4>✅ Résultat</h4>
+            <p><strong>${deg.toFixed(4)}°</strong> = <strong>${rad.toFixed(6)} rad</strong></p>
+            <p style="color:#666; font-size:13px;">= ${rad.toFixed(6)} rad ≈ ${(rad/Math.PI).toFixed(4)}π rad</p>
+        `;
+        resultEl.classList.add('show');
+    }
+
+    function applyNotableAngle() {
+        const val = document.getElementById('angleNotable').value;
+        if (val === '') return;
+        document.getElementById('angleDeg').value = val;
+        convertAngle('deg');
+    }
+
+    function convertLength() {
+        const val = parseFloat(document.getElementById('lengthValue').value);
+        const from = document.getElementById('lengthFrom').value;
+        const to = document.getElementById('lengthTo').value;
+        if (isNaN(val)) { document.getElementById('resultLength').classList.remove('show'); return; }
+        const metres = val * lengthToMetres[from];
+        const result = metres / lengthToMetres[to];
+        const unitNames = { nm: 'nm', um: 'μm', mm: 'mm', cm: 'cm', m: 'm' };
+        const resultEl = document.getElementById('resultLength');
+        resultEl.innerHTML = `
+            <h4>✅ Résultat</h4>
+            <div class="result-highlight">${val} ${unitNames[from]} = ${result.toExponential(6)} ${unitNames[to]}</div>
+            <p style="color:#666; font-size:13px;">= ${metres.toExponential(6)} m</p>
+        `;
+        resultEl.classList.add('show');
+    }
+    </script>
+
+    <!-- ── Modal détail préparation ── -->
+    <div class="prep-modal-overlay" id="prepModalOverlay" onclick="closePrepModal(event)">
+        <div class="prep-modal" id="prepModal">
+            <div class="prep-modal-header">
+                <div class="prep-modal-title" id="modalTitle"></div>
+                <button class="prep-modal-close" onclick="closePrepModalDirect()">✕</button>
+            </div>
+            <div id="modalPictos" class="prep-modal-pictos"></div>
+            <div class="prep-modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        // Vérifier si l'utilisateur est connecté
+        window.addEventListener('load', function() {
+            const loggedUser = localStorage.getItem('loggedUser');
+            
+            if (!loggedUser) {
+                // Rediriger vers la page de login si non connecté
+                window.location.href = 'login.html';
+            } else {
+                // Afficher le nom de l'utilisateur
+                document.getElementById('userBadge').textContent = loggedUser;
+            }
+        });
+
+        // Fonction de déconnexion
+        function logout() {
+            if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
+                localStorage.removeItem('loggedUser');
+                localStorage.removeItem('loginTime');
+                window.location.href = 'login.html';
+            }
+        }
+
+        // Fonction pour changer d'onglet
+        function switchTab(tabIndex) {
+            // Désactiver tous les boutons et sections
+            const buttons = document.querySelectorAll('.tab-button');
+            const sections = document.querySelectorAll('.content-section');
+            
+            buttons.forEach(btn => btn.classList.remove('active'));
+            sections.forEach(section => section.classList.remove('active'));
+            
+            // Activer le bouton et la section sélectionnés
+            buttons[tabIndex].classList.add('active');
+            sections[tabIndex].classList.add('active');
+            
+            // Gérer le chargement selon l'onglet
+            if (tabIndex === 0) {
+                // Onglet Déchets
+                if (document.getElementById('wasteContainer').style.display === 'none' && 
+                    document.getElementById('loadingWaste').style.display !== 'none') {
+                    loadWasteData();
+                }
+                startWasteAutoRefresh();
+            } else if (tabIndex === 2) {
+                // Onglet 3 - Préparations
+                if (allPreparations.length === 0) {
+                    loadAllPreparations();
+                }
+                stopWasteAutoRefresh();
+            } else {
+                stopWasteAutoRefresh();
+            }
+        }
+
+        // ===== ONGLET 3 - PRÉPARATIONS =====
+        const PREP_SHEET_ID = '1Hwy94cpJxufLrDiB3fI5DD58LE1A0-2r2reu-ELZ_A0';
+        const PREP_CATEGORIES = ['Tampons', 'Indicateurs colorés', 'Tests identification', 'Éluants CCM', 'Révélateurs CCM', 'Autres'];
+        let allPreparations = [];
+        let currentCategory = 'Tampons';
+        let isSearching = false;
+
+        // Ouvre le Google Sheet sur l'onglet de la catégorie active pour ajouter une préparation
+        function openNewPreparationSheet() {
+            const sheetUrl = `https://docs.google.com/spreadsheets/d/${PREP_SHEET_ID}/edit`;
+            window.open(sheetUrl, '_blank');
+        }
+        
+        async function loadAllPreparations() {
+            allPreparations = [];
+            for (const category of PREP_CATEGORIES) {
+                try {
+                    const url = `https://docs.google.com/spreadsheets/d/${PREP_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(category)}`;
+                    const response = await fetch(url);
+                    const csvText = await response.text();
+                    const preps = parsePreparationCSV(csvText, category);
+                    allPreparations = allPreparations.concat(preps);
+                } catch (error) {
+                    console.error(`Erreur ${category}:`, error);
+                }
+            }
+            displayPreparations();
+        }
+        
+        function parsePreparationCSV(csv, category) {
+            const preparations = [];
+            const rows = [];
+            let currentRow = '';
+            let insideQuotes = false;
+            
+            for (let i = 0; i < csv.length; i++) {
+                const char = csv[i];
+                if (char === '"') {
+                    insideQuotes = !insideQuotes;
+                    currentRow += char;
+                } else if (char === '\n' && !insideQuotes) {
+                    if (currentRow.trim()) rows.push(currentRow);
+                    currentRow = '';
+                } else {
+                    currentRow += char;
+                }
+            }
+            if (currentRow.trim()) rows.push(currentRow);
+            
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const values = [];
+                let currentValue = '';
+                let insideQuote = false;
+                
+                for (let j = 0; j < row.length; j++) {
+                    const char = row[j];
+                    if (char === '"') {
+                        insideQuote = !insideQuote;
+                    } else if (char === ',' && !insideQuote) {
+                        values.push(currentValue.trim());
+                        currentValue = '';
+                    } else {
+                        currentValue += char;
+                    }
+                }
+                values.push(currentValue.trim());
+                
+                if (values.length >= 4 && values[0]) {
+                    const prep = {
+                        nom: values[0] || '',
+                        utilisation: values[1] || '',
+                        composition: values[2] || '',
+                        protocole: values[3] || '',
+                        pictogrammes: [],
+                        category: category
+                    };
+                    
+                    if (values[4] && values[4].trim()) {
+                        prep.pictogrammes = values[4].trim().toLowerCase().split(/\s+/).filter(p => p && p.startsWith('sgh'));
+                    }
+                    
+                    preparations.push(prep);
+                }
+            }
+            return preparations;
+        }
+        
+        function selectCategory(category) {
+            currentCategory = category;
+            isSearching = false;
+            document.getElementById('globalSearchInput').value = '';
+            document.getElementById('searchResultsCount').textContent = '';
+            
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.includes(category.split(' ')[0])) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            displayPreparations();
+        }
+        
+        function globalSearchPreparations() {
+            const searchTerm = document.getElementById('globalSearchInput').value.toLowerCase();
+            
+            if (searchTerm.length === 0) {
+                isSearching = false;
+                document.getElementById('searchResultsCount').textContent = '';
+                displayPreparations();
+                return;
+            }
+            
+            isSearching = true;
+            displayPreparations(searchTerm);
+        }
+        
+        function displayPreparations(searchTerm = '') {
+            const container = document.getElementById('preparationsContainer');
+            let preps = allPreparations;
+
+            if (isSearching && searchTerm) {
+                preps = allPreparations.filter(p =>
+                    p.nom.toLowerCase().includes(searchTerm) ||
+                    p.utilisation.toLowerCase().includes(searchTerm) ||
+                    p.composition.toLowerCase().includes(searchTerm) ||
+                    p.protocole.toLowerCase().includes(searchTerm)
+                );
+                document.getElementById('searchResultsCount').textContent = `${preps.length} préparation(s) trouvée(s)`;
+            } else {
+                preps = allPreparations.filter(p => p.category === currentCategory);
+                document.getElementById('searchResultsCount').textContent = '';
+            }
+
+            if (preps.length === 0) {
+                container.innerHTML = '<p style="text-align:center;color:#999;padding:30px 0;">Aucune préparation trouvée.</p>';
+                return;
+            }
+
+            // Construire la grille de tuiles
+            let html = '<div class="prep-grid">';
+            preps.forEach((prep, idx) => {
+                let pictosHTML = '';
+                if (prep.pictogrammes && prep.pictogrammes.length > 0) {
+                    pictosHTML = '<div class="prep-tile-pictos">';
+                    prep.pictogrammes.forEach(code => {
+                        pictosHTML += `<img src="${code}.png" alt="${code}" onerror="this.style.display='none'">`;
+                    });
+                    pictosHTML += '</div>';
+                }
+                html += `
+                    <div class="prep-tile" onclick="openPrepModal(${idx}, ${JSON.stringify(isSearching)})">
+                        ${pictosHTML}
+                        <div class="prep-tile-name">${prep.nom}</div>
+                    </div>`;
+            });
+            html += '</div>';
+
+            container.innerHTML = html;
+
+            // Stocker les préps filtrées pour le modal
+            container._currentPreps = preps;
+        }
+
+        // ── Fonctions Modal ──
+        function openPrepModal(idx, searching) {
+            const container = document.getElementById('preparationsContainer');
+            const preps = container._currentPreps;
+            if (!preps || !preps[idx]) return;
+            const prep = preps[idx];
+
+            // Titre
+            document.getElementById('modalTitle').textContent = '🧪 ' + prep.nom;
+
+            // Pictogrammes
+            let pictosHTML = '';
+            if (prep.pictogrammes && prep.pictogrammes.length > 0) {
+                prep.pictogrammes.forEach(code => {
+                    pictosHTML += `<img src="${code}.png" alt="${code}" onerror="this.style.display='none'">`;
+                });
+            }
+            document.getElementById('modalPictos').innerHTML = pictosHTML;
+
+            // Corps
+            let bodyHTML = '';
+            if (searching) {
+                bodyHTML += `<div class="prep-modal-category">${prep.category}</div>`;
+            }
+            if (prep.utilisation) {
+                bodyHTML += `
+                    <div class="prep-modal-section">
+                        <div class="prep-modal-section-title">📝 Utilisation</div>
+                        <div class="prep-modal-section-content">${prep.utilisation}</div>
+                    </div>`;
+            }
+            if (prep.composition) {
+                bodyHTML += `
+                    <div class="prep-modal-section">
+                        <div class="prep-modal-section-title">🧪 Composition</div>
+                        <div class="prep-modal-section-content">${prep.composition}</div>
+                    </div>`;
+            }
+            if (prep.protocole) {
+                const etapes = prep.protocole.split('\n').filter(e => e.trim());
+                if (etapes.length > 0) {
+                    const items = etapes.map(e => `<li>${e}</li>`).join('');
+                    bodyHTML += `
+                        <div class="prep-modal-section">
+                            <div class="prep-modal-section-title">📋 Protocole</div>
+                            <div class="prep-modal-protocol"><ol>${items}</ol></div>
+                        </div>`;
+                }
+            }
+            document.getElementById('modalBody').innerHTML = bodyHTML;
+
+            // Ouvrir
+            document.getElementById('prepModalOverlay').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePrepModal(event) {
+            // Fermer seulement si clic sur l'overlay (pas sur le modal lui-même)
+            if (event.target === document.getElementById('prepModalOverlay')) {
+                closePrepModalDirect();
+            }
+        }
+
+        function closePrepModalDirect() {
+            document.getElementById('prepModalOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        // Fermer avec la touche Échap
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closePrepModalDirect();
+        });
+
+    </script>
+</body>
+</html>

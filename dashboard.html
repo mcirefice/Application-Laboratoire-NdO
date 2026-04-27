@@ -566,7 +566,13 @@
                     📚 Préparations Particulières
                 </button>
                 <button class="tab-button" onclick="switchTab(3)">
-                    📋 Onglet 4
+                    🔭 Conversions Optiques
+                </button>
+                <button class="tab-button" onclick="switchTab(4)">
+                    📋 Onglet 5
+                </button>
+                <button class="tab-button" onclick="switchTab(5)">
+                    📋 Onglet 6
                 </button>
             </div>
 
@@ -1917,17 +1923,286 @@
                     </div>
                 </div>
 
-                <!-- Contenu Onglet 4 -->
+                <!-- Contenu Onglet 4 - Conversions Optiques -->
                 <div class="content-section" id="section3">
+                    <h2 style="color: #667eea; margin-bottom: 30px; text-align: center;">🔭 Conversions Optiques & Unités</h2>
+
+                    <div class="calculator-container">
+
+                        <!-- SECTION 1 : Optique / Dioptries -->
+                        <div class="calc-card">
+                            <h3>🔬 Distance focale ↔ Dioptries</h3>
+                            <p style="color:#666; font-size:14px; margin-bottom:20px;">
+                                Relation : <strong>D (dioptries) = 1 / f (mètres)</strong> &nbsp;|&nbsp; 
+                                Centidioptries : +200 cD = +2,00 D &nbsp;|&nbsp; négatif = lentille divergente
+                            </p>
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label>Distance focale f (m)</label>
+                                    <input type="number" id="focalMetres" placeholder="Ex: 0.5" step="0.001" oninput="convertFocal('f_to_d')">
+                                </div>
+                                <div class="input-group">
+                                    <label>Vergence / Dioptries (D)</label>
+                                    <input type="number" id="dioptries" placeholder="Ex: 2.00" step="0.01" oninput="convertFocal('d_to_f')">
+                                </div>
+                                <div class="input-group">
+                                    <label>Centidioptries (cD)</label>
+                                    <input type="number" id="centidioptries" placeholder="Ex: +200 ou -300" step="1" oninput="convertFocal('cd_to_f')">
+                                </div>
+                            </div>
+                            <div id="resultFocal" class="result-box" style="margin-top:10px;"></div>
+                        </div>
+
+                        <!-- SECTION 2 : Longueur d'onde / Fréquence -->
+                        <div class="calc-card">
+                            <h3>🌈 Longueur d'onde ↔ Fréquence</h3>
+                            <p style="color:#666; font-size:14px; margin-bottom:20px;">
+                                Relation : <strong>c = λ × ν</strong> &nbsp;|&nbsp; c = 3×10⁸ m/s (vitesse de la lumière)
+                            </p>
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label>Longueur d'onde λ</label>
+                                    <input type="number" id="lambdaValue" placeholder="Ex: 550" step="0.001" oninput="convertWave()">
+                                </div>
+                                <div class="input-group">
+                                    <label>Unité de λ</label>
+                                    <select id="lambdaUnit" onchange="convertWave()" style="padding:10px; border:2px solid #e0e0e0; border-radius:8px; font-size:14px;">
+                                        <option value="nm">nm (nanomètres)</option>
+                                        <option value="um">μm (micromètres)</option>
+                                        <option value="mm">mm (millimètres)</option>
+                                        <option value="m">m (mètres)</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Fréquence ν (Hz)</label>
+                                    <input type="number" id="freqValue" placeholder="Ex: 5.45e14" step="any" oninput="convertWaveBack()">
+                                </div>
+                            </div>
+                            <div id="resultWave" class="result-box" style="margin-top:10px;"></div>
+                        </div>
+
+                        <!-- SECTION 3 : Angles -->
+                        <div class="calc-card">
+                            <h3>📐 Degrés ↔ Radians</h3>
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label>Angle en degrés (°)</label>
+                                    <input type="number" id="angleDeg" placeholder="Ex: 45" step="0.001" oninput="convertAngle('deg')">
+                                </div>
+                                <div class="input-group">
+                                    <label>Angle en radians (rad)</label>
+                                    <input type="number" id="angleRad" placeholder="Ex: 0.785" step="0.0001" oninput="convertAngle('rad')">
+                                </div>
+                                <div class="input-group">
+                                    <label>Valeur remarquable</label>
+                                    <select id="angleNotable" onchange="applyNotableAngle()" style="padding:10px; border:2px solid #e0e0e0; border-radius:8px; font-size:14px;">
+                                        <option value="">— Choisir —</option>
+                                        <option value="0">0° = 0 rad</option>
+                                        <option value="30">30° = π/6</option>
+                                        <option value="45">45° = π/4</option>
+                                        <option value="60">60° = π/3</option>
+                                        <option value="90">90° = π/2</option>
+                                        <option value="180">180° = π</option>
+                                        <option value="270">270° = 3π/2</option>
+                                        <option value="360">360° = 2π</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="resultAngle" class="result-box" style="margin-top:10px;"></div>
+                        </div>
+
+                        <!-- SECTION 4 : Conversions de longueurs -->
+                        <div class="calc-card">
+                            <h3>📏 Conversions de longueurs</h3>
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label>Valeur à convertir</label>
+                                    <input type="number" id="lengthValue" placeholder="Ex: 550" step="any" oninput="convertLength()">
+                                </div>
+                                <div class="input-group">
+                                    <label>Unité source</label>
+                                    <select id="lengthFrom" onchange="convertLength()" style="padding:10px; border:2px solid #e0e0e0; border-radius:8px; font-size:14px;">
+                                        <option value="nm">nm (nanomètres)</option>
+                                        <option value="um">μm (micromètres)</option>
+                                        <option value="mm">mm (millimètres)</option>
+                                        <option value="cm">cm (centimètres)</option>
+                                        <option value="m" selected>m (mètres)</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Unité cible</label>
+                                    <select id="lengthTo" onchange="convertLength()" style="padding:10px; border:2px solid #e0e0e0; border-radius:8px; font-size:14px;">
+                                        <option value="nm">nm (nanomètres)</option>
+                                        <option value="um" selected>μm (micromètres)</option>
+                                        <option value="mm">mm (millimètres)</option>
+                                        <option value="cm">cm (centimètres)</option>
+                                        <option value="m">m (mètres)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="resultLength" class="result-box" style="margin-top:10px;"></div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Contenu Onglet 5 - Vide -->
+                <div class="content-section" id="section4">
                     <div class="info-card">
-                        <h2>📋 Onglet 4</h2>
+                        <h2>📋 Onglet 5</h2>
                         <p>Section disponible pour extension future.</p>
                         <span class="coming-soon">À configurer</span>
                     </div>
                 </div>
+
+                <!-- Contenu Onglet 6 - Vide -->
+                <div class="content-section" id="section5">
+                    <div class="info-card">
+                        <h2>📋 Onglet 6</h2>
+                        <p>Section disponible pour extension future.</p>
+                        <span class="coming-soon">À configurer</span>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
+
+    <script>
+    // ========== CONVERSIONS OPTIQUES ==========
+
+    const C_LIGHT = 3e8; // vitesse de la lumière en m/s
+
+    // Facteurs de conversion vers les mètres
+    const lengthToMetres = { nm: 1e-9, um: 1e-6, mm: 1e-3, cm: 1e-2, m: 1 };
+
+    function convertFocal(direction) {
+        const fInput = document.getElementById('focalMetres');
+        const dInput = document.getElementById('dioptries');
+        const cdInput = document.getElementById('centidioptries');
+        let f, D, cD, html = '';
+
+        if (direction === 'f_to_d') {
+            f = parseFloat(fInput.value);
+            if (isNaN(f) || f === 0) { dInput.value = ''; cdInput.value = ''; return; }
+            D = 1 / f;
+            cD = Math.round(D * 100);
+            dInput.value = D.toFixed(4);
+            cdInput.value = cD;
+        } else if (direction === 'd_to_f') {
+            D = parseFloat(dInput.value);
+            if (isNaN(D) || D === 0) { fInput.value = ''; cdInput.value = ''; return; }
+            f = 1 / D;
+            cD = Math.round(D * 100);
+            fInput.value = f.toFixed(4);
+            cdInput.value = cD;
+        } else if (direction === 'cd_to_f') {
+            cD = parseFloat(cdInput.value);
+            if (isNaN(cD) || cD === 0) { fInput.value = ''; dInput.value = ''; return; }
+            D = cD / 100;
+            f = 1 / D;
+            dInput.value = D.toFixed(4);
+            fInput.value = f.toFixed(4);
+        }
+
+        const type = D > 0 ? '🔵 Lentille convergente' : '🔴 Lentille divergente';
+        const resultEl = document.getElementById('resultFocal');
+        resultEl.innerHTML = `
+            <h4>✅ Résultat</h4>
+            <p><strong>Distance focale :</strong> f = ${f.toFixed(4)} m</p>
+            <p><strong>Vergence :</strong> D = ${D.toFixed(4)} dioptries</p>
+            <p><strong>Centidioptries :</strong> ${cD > 0 ? '+' : ''}${cD} cD</p>
+            <div class="result-highlight">${type}</div>
+        `;
+        resultEl.classList.add('show');
+    }
+
+    function convertWave() {
+        const val = parseFloat(document.getElementById('lambdaValue').value);
+        const unit = document.getElementById('lambdaUnit').value;
+        if (isNaN(val) || val <= 0) { document.getElementById('freqValue').value = ''; return; }
+        const lambdaM = val * lengthToMetres[unit];
+        const freq = C_LIGHT / lambdaM;
+        document.getElementById('freqValue').value = freq.toExponential(4);
+        showWaveResult(lambdaM, freq);
+    }
+
+    function convertWaveBack() {
+        const freq = parseFloat(document.getElementById('freqValue').value);
+        if (isNaN(freq) || freq <= 0) { document.getElementById('lambdaValue').value = ''; return; }
+        const unit = document.getElementById('lambdaUnit').value;
+        const lambdaM = C_LIGHT / freq;
+        const lambdaDisplay = lambdaM / lengthToMetres[unit];
+        document.getElementById('lambdaValue').value = lambdaDisplay.toExponential(4);
+        showWaveResult(lambdaM, freq);
+    }
+
+    function showWaveResult(lambdaM, freq) {
+        // Domaine spectral
+        let domaine = '';
+        if (lambdaM < 1e-9) domaine = 'Rayons X / gamma';
+        else if (lambdaM < 380e-9) domaine = '🟣 Ultraviolet (UV)';
+        else if (lambdaM < 750e-9) domaine = '🌈 Visible';
+        else if (lambdaM < 1e-3) domaine = '🔴 Infrarouge (IR)';
+        else domaine = '📡 Micro-ondes / Radio';
+
+        const resultEl = document.getElementById('resultWave');
+        resultEl.innerHTML = `
+            <h4>✅ Résultat</h4>
+            <p><strong>λ :</strong> ${(lambdaM*1e9).toExponential(3)} nm = ${(lambdaM*1e6).toExponential(3)} μm = ${lambdaM.toExponential(3)} m</p>
+            <p><strong>Fréquence ν :</strong> ${freq.toExponential(4)} Hz = ${(freq/1e12).toFixed(3)} THz</p>
+            <div class="result-highlight">${domaine}</div>
+        `;
+        resultEl.classList.add('show');
+    }
+
+    function convertAngle(from) {
+        let deg, rad;
+        document.getElementById('angleNotable').value = '';
+        if (from === 'deg') {
+            deg = parseFloat(document.getElementById('angleDeg').value);
+            if (isNaN(deg)) { document.getElementById('angleRad').value = ''; return; }
+            rad = deg * Math.PI / 180;
+            document.getElementById('angleRad').value = rad.toFixed(6);
+        } else {
+            rad = parseFloat(document.getElementById('angleRad').value);
+            if (isNaN(rad)) { document.getElementById('angleDeg').value = ''; return; }
+            deg = rad * 180 / Math.PI;
+            document.getElementById('angleDeg').value = deg.toFixed(4);
+        }
+        const resultEl = document.getElementById('resultAngle');
+        resultEl.innerHTML = `
+            <h4>✅ Résultat</h4>
+            <p><strong>${deg.toFixed(4)}°</strong> = <strong>${rad.toFixed(6)} rad</strong></p>
+            <p style="color:#666; font-size:13px;">= ${rad.toFixed(6)} rad ≈ ${(rad/Math.PI).toFixed(4)}π rad</p>
+        `;
+        resultEl.classList.add('show');
+    }
+
+    function applyNotableAngle() {
+        const val = document.getElementById('angleNotable').value;
+        if (val === '') return;
+        document.getElementById('angleDeg').value = val;
+        convertAngle('deg');
+    }
+
+    function convertLength() {
+        const val = parseFloat(document.getElementById('lengthValue').value);
+        const from = document.getElementById('lengthFrom').value;
+        const to = document.getElementById('lengthTo').value;
+        if (isNaN(val)) { document.getElementById('resultLength').classList.remove('show'); return; }
+        const metres = val * lengthToMetres[from];
+        const result = metres / lengthToMetres[to];
+        const unitNames = { nm: 'nm', um: 'μm', mm: 'mm', cm: 'cm', m: 'm' };
+        const resultEl = document.getElementById('resultLength');
+        resultEl.innerHTML = `
+            <h4>✅ Résultat</h4>
+            <div class="result-highlight">${val} ${unitNames[from]} = ${result.toExponential(6)} ${unitNames[to]}</div>
+            <p style="color:#666; font-size:13px;">= ${metres.toExponential(6)} m</p>
+        `;
+        resultEl.classList.add('show');
+    }
+    </script>
 
     <!-- ── Modal détail préparation ── -->
     <div class="prep-modal-overlay" id="prepModalOverlay" onclick="closePrepModal(event)">

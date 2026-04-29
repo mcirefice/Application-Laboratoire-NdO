@@ -3,13 +3,13 @@
 > ⚠️ À uploader dans Claude en début de chaque nouvelle conversation sur ce projet.
 > Instruction à inclure : **"Consulte notre historique ET ce fichier avant toute modification."**
 
----
+---                                                                                                                                          
 
 ## 🌐 DÉPLOIEMENT
-
+ 
 - **Hébergement** : GitHub Pages (Netlify abandonné — quota épuisé)
-- **Repository GitHub** : https://github.com/mcirefice/Application-Laboratoire-NdO
-- **URL de l'application** : https://mcirefice.github.io/Application-Laboratoire-NdO/
+- **Repository GitHub** : https://github.com/mcirefice/Application-Laboratoire-NdO  
+- **URL de l'application** : https://mcirefice.github.io/Application-Laboratoire-NdO/   
 - **Fichier de démarrage** : `index.html` → redirige vers `connexion.html`
 
 ---

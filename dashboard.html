@@ -1397,7 +1397,7 @@
                             document.getElementById('wasteContainer').style.display = 'block';
                             displayWasteCharts();
                             // ===== CHARGEMENT DU COÛT TOTAL TTC =====
-                            loadWasteCost(csvText);
+                            loadWasteCost();
                         } catch (error) {
                             console.error('Erreur de chargement:', error);
                             document.getElementById('loadingWaste').innerHTML = `
@@ -1430,37 +1430,20 @@
                         return data;
                     }
 
-                    // ===== FONCTION COÛT TOTAL TTC — lit la cellule G15 =====
-                    function loadWasteCost(csvText) {
+                    // ===== FONCTION COÛT TOTAL TTC — lit la cellule G15 directement =====
+                    async function loadWasteCost() {
                         try {
-                            const rows = csvText.split('\n');
-                            // G15 = ligne index 14, colonne index 6
-                            if (rows.length >= 15) {
-                                const row15 = rows[14];
-                                // Parser la ligne CSV correctement (gestion des guillemets)
-                                const values = [];
-                                let current = '';
-                                let inQuotes = false;
-                                for (let i = 0; i < row15.length; i++) {
-                                    const ch = row15[i];
-                                    if (ch === '"') { inQuotes = !inQuotes; }
-                                    else if (ch === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
-                                    else { current += ch; }
-                                }
-                                values.push(current.trim());
-
-                                const rawCost = (values[6] || '').replace(/^"|"$/g, '').trim();
-
-                                if (rawCost) {
-                                    // Nettoyer et formater en euros
-                                    const num = parseFloat(rawCost.replace(/\s/g, '').replace(',', '.').replace(/[^\d.]/g, ''));
-                                    const formatted = isNaN(num)
-                                        ? rawCost
-                                        : num.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
-                                    document.getElementById('wasteCostValue').textContent = formatted;
-                                } else {
-                                    document.getElementById('wasteCostValue').textContent = '0,00 €';
-                                }
+                            const url = `https://docs.google.com/spreadsheets/d/${WASTE_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${WASTE_SHEET_NAME}&range=G15`;
+                            const response = await fetch(url);
+                            const text = await response.text();
+                            // Le résultat est juste la valeur de G15, entre guillemets
+                            const rawCost = text.replace(/^"|"$/g, '').trim();
+                            if (rawCost) {
+                                const num = parseFloat(rawCost.replace(/\s/g, '').replace(',', '.').replace(/[^\d.]/g, ''));
+                                const formatted = isNaN(num)
+                                    ? rawCost
+                                    : num.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+                                document.getElementById('wasteCostValue').textContent = formatted;
                                 document.getElementById('wasteCostBlock').style.display = 'block';
                             }
                         } catch (error) {

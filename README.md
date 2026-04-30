@@ -52,7 +52,7 @@
 | Vert - Bases | #10b981 | bidons | 25 |
 | Rouge - Solvant non halogéné | #ef4444 | bidons | 10 |
 | Rouge X - Solvant halogéné | #dc2626 | bidons | 10 |
-| PCL - Petit Contenant | #8b5cf6 | boîtes | 30 |
+| PCL - Petit Contenant | #8b5cf6 | boîtes | 100 |
 | Bidons biologiques | #f97316 | bidons | 12 |
 | Solide Organique | #84cc16 | boîtes | 6 |
 | Filtre de Hotte | #64748b | filtres | 10 |

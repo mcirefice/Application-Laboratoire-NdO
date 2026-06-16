@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laboratoire - Commandes</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── HEADER ── */
+.header {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  padding: 20px 25px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+.header-left, .header-right { display: flex; align-items: center; flex-shrink: 0; }
+.header-left img, .header-right img { height: 55px; object-fit: contain; }
+.header-center { display: flex; align-items: center; justify-content: center; text-align: center; flex: 1; }
+.header-center h1 { color: #667eea; font-size: 26px; margin: 0; }
+.header-center p { color: #666; font-size: 13px; margin: 4px 0 0 0; }
+
+.user-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 0 2px;
+  border-top: 1px solid #f0f0f0;
+  flex-wrap: wrap;
+}
+.user-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 7px 18px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.btn-nav {
+  background: #fff;
+  border: 2px solid #667eea;
+  color: #667eea;
+  padding: 7px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-nav:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* ── MAIN CARD ── */
+.main-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+/* ── TABS ── */
+.tabs-nav {
+  display: flex;
+  background: #f8f9fa;
+  border-bottom: 2px solid #e0e0e0;
+  overflow-x: auto;
+}
+.tab-button {
+  flex: 1;
+  min-width: 150px;
+  padding: 18px 20px;
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  white-space: nowrap;
+}
+.tab-button:hover { background: rgba(102,126,234,0.1); color: #667eea; }
+.tab-button.active { color: #667eea; background: white; }
+.tab-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.tab-content { padding: 30px; min-height: 500px; }
+.content-section { display: none; animation: fadeIn 0.3s ease; }
+.content-section.active { display: block; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── BOUTONS ── */
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
+
+.btn-secondary {
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  padding: 9px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.btn-secondary:hover { background: #667eea; color: white; transform: translateY(-2px); }
+
+.btn-danger {
+  background: white;
+  color: #ef4444;
+  border: 2px solid #ef4444;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.btn-danger:hover { background: #ef4444; color: white; }
+
+.btn-success {
+  background: white;
+  color: #10b981;
+  border: 2px solid #10b981;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.btn-success:hover { background: #10b981; color: white; }
+
+/* ── FORMULAIRE ── */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.full-width { grid-column: 1 / -1; }
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 10px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  background: white;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+.form-group textarea { resize: vertical; min-height: 80px; }
+.form-group .calc-preview {
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(102,126,234,0.08) 0%, rgba(118,75,162,0.08) 100%);
+  border: 2px solid #667eea;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #667eea;
+}
+
+/* Section ventilation analytique */
+.ventilation-section {
+  background: #f8f9fa;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.ventilation-section h4 {
+  color: #667eea;
+  margin-bottom: 14px;
+  font-size: 15px;
+}
+.ventilation-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.ventilation-row input, .ventilation-row select {
+  padding: 8px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.ventilation-row input:focus, .ventilation-row select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+.ventilation-total {
+  font-size: 13px;
+  color: #666;
+  margin-top: 8px;
+}
+.ventilation-total.ok { color: #10b981; font-weight: 600; }
+.ventilation-total.ko { color: #ef4444; font-weight: 600; }
+
+/* Section remboursement prof */
+.remb-section {
+  background: #fff8f3;
+  border: 2px solid #f97316;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+  display: none;
+}
+.remb-section h4 { color: #f97316; margin-bottom: 14px; font-size: 15px; }
+
+/* ── TABLEAU DES COMMANDES ── */
+.table-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.search-input {
+  padding: 10px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 14px;
+  min-width: 220px;
+  transition: border-color 0.2s;
+  flex: 1;
+}
+.search-input:focus { outline: none; border-color: #667eea; }
+.filter-select {
+  padding: 10px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+.filter-select:focus { outline: none; border-color: #667eea; }
+
+.table-wrapper { overflow-x: auto; border-radius: 14px; border: 2px solid #e0e0e0; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.2s; }
+tbody tr:hover { background: rgba(102,126,234,0.05); }
+tbody td { padding: 11px 14px; color: #444; vertical-align: middle; }
+
+/* Badges statut */
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.badge-commander  { background: #e0e7ff; color: #3730a3; }
+.badge-commande   { background: #dbeafe; color: #1d4ed8; }
+.badge-recu-part  { background: #fef3c7; color: #92400e; }
+.badge-recu-comp  { background: #d1fae5; color: #065f46; }
+.badge-facture    { background: #ede9fe; color: #5b21b6; }
+
+/* Badge type */
+.badge-type {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.type-consommable  { background: #e0f2fe; color: #0369a1; }
+.type-investissement { background: #dcfce7; color: #166534; }
+.type-maintenance  { background: #fef9c3; color: #854d0e; }
+.type-machine      { background: #fce7f3; color: #9d174d; }
+.type-remb         { background: #ffedd5; color: #c2410c; }
+
+/* Modal modification statut */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: modalIn 0.22s ease;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.93) translateY(20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px 24px;
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-header h3 { color: white; font-size: 18px; }
+.modal-close {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.modal-close:hover { background: rgba(255,255,255,0.35); }
+.modal-body { padding: 24px; }
+.modal-body .form-group { margin-bottom: 16px; }
+
+/* Messages notification */
+.notif {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  padding: 14px 22px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  z-index: 2000;
+  animation: notifIn 0.3s ease;
+  max-width: 360px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.notif.success { background: #10b981; }
+.notif.error   { background: #ef4444; }
+@keyframes notifIn {
+  from { opacity: 0; transform: translateX(60px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Loading */
+.loading-msg {
+  text-align: center;
+  color: #667eea;
+  padding: 60px 20px;
+  font-size: 16px;
+}
+.spinner {
+  width: 40px; height: 40px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+}
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state p { font-size: 15px; }
+
+/* Barre de suivi remboursement */
+.suivi-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.suivi-step {
+  flex: 1;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  background: #f0f0f0;
+  color: #999;
+}
+.suivi-step.active { background: #667eea; color: white; }
+.suivi-step.done   { background: #10b981; color: white; }
+.suivi-arrow { color: #ccc; font-size: 12px; }
+
+/* Section remboursements liste */
+.remb-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  transition: all 0.2s;
+}
+.remb-card:hover { border-color: #667eea; box-shadow: 0 4px 12px rgba(102,126,234,0.12); }
+.remb-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.remb-card-num { font-size: 13px; font-weight: 700; color: #667eea; }
+.remb-card-title { font-size: 15px; font-weight: 700; color: #333; }
+.remb-card-meta { font-size: 12px; color: #888; margin-top: 2px; }
+.remb-card-amount { font-size: 22px; font-weight: 800; color: #f97316; }
+.remb-badge-valid {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.valid-attente  { background: #fef9c3; color: #854d0e; }
+.valid-valide   { background: #d1fae5; color: #065f46; }
+.valid-refuse   { background: #fee2e2; color: #991b1b; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  body { padding: 10px; }
+  .header { padding: 15px; }
+  .header-left img, .header-right img { height: 40px; }
+  .header-center h1 { font-size: 18px; }
+  .tab-content { padding: 16px; }
+  .tabs-nav { flex-direction: column; }
+  .tab-button { min-width: auto; }
+  .form-grid { grid-template-columns: 1fr; }
+  .ventilation-row { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="dashboard-container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="header-left">
+        <img src="logo-notre-dame.png" alt="Notre-Dame Les Oiseaux">
+      </div>
+      <div class="header-center">
+        <div>
+          <h1>📦 Commandes</h1>
+          <p>Gestion des commandes — Laboratoire NdO</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <img src="logo-ndo-sup.png" alt="NDO Sup">
+      </div>
+    </div>
+    <div class="user-info">
+      <span class="user-badge" id="userBadge">Utilisateur</span>
+      <a href="dashboard.html" class="btn-nav">🏠 Tableau de bord</a>
+      <a href="budget.html" class="btn-nav">📊 Budget</a>
+      <button class="btn-nav" onclick="logout()">🚪 Déconnexion</button>
+    </div>
+  </div>
+
+  <!-- MAIN CARD -->
+  <div class="main-card">
+    <div class="tabs-nav">
+      <button class="tab-button active" onclick="switchTab(0)">➕ Nouvelle commande</button>
+      <button class="tab-button" onclick="switchTab(1)">📋 Toutes les commandes</button>
+      <button class="tab-button" onclick="switchTab(2)">💳 Remboursements profs</button>
+    </div>
+
+    <div class="tab-content">
+
+      <!-- ══ ONGLET 1 : NOUVELLE COMMANDE ══ -->
+      <div class="content-section active" id="section0">
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+          <h2 style="color:#667eea; font-size:20px;">➕ Saisir une nouvelle commande</h2>
+          <div style="font-size:13px; color:#999;" id="nextNumPreview">N° à venir : chargement...</div>
+        </div>
+
+        <!-- Champs principaux -->
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Laboratoire *</label>
+            <select id="f-labo">
+              <option value="">— Sélectionner —</option>
+              <option value="Tocqueville">Tocqueville</option>
+              <option value="Saint-Pierre">Saint-Pierre</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Type *</label>
+            <select id="f-type" onchange="onTypeChange()">
+              <option value="">— Sélectionner —</option>
+              <option value="Consommable">Consommable</option>
+              <option value="Investissement">Investissement</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Machine">Machine</option>
+              <option value="Remboursement prof">Remboursement prof</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fournisseur *</label>
+            <div style="display:flex; gap:8px;">
+              <select id="f-fournisseur" style="flex:1;">
+                <option value="">— Sélectionner —</option>
+              </select>
+              <button class="btn-secondary" onclick="showAddFournisseur()" title="Ajouter un fournisseur" style="padding:8px 14px; flex-shrink:0;">＋</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Code analytique *</label>
+            <select id="f-code-ana">
+              <option value="">— Sélectionner —</option>
+            </select>
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label>Désignation du produit *</label>
+            <input type="text" id="f-produit" placeholder="Ex : Acide chlorhydrique 37%">
+          </div>
+          <div class="form-group">
+            <label>Référence fournisseur</label>
+            <input type="text" id="f-reference" placeholder="Ex : REF-12345">
+          </div>
+          <div class="form-group">
+            <label>Conditionnement</label>
+            <input type="text" id="f-conditionnement" placeholder="Ex : Flacon 1L">
+          </div>
+          <div class="form-group">
+            <label>Saisie en</label>
+            <select id="f-saisie-en" onchange="calculerTotal()">
+              <option value="HT">Prix HT</option>
+              <option value="TTC">Prix TTC</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Prix unitaire *</label>
+            <input type="number" id="f-prix" placeholder="Ex : 15.50" step="0.01" min="0" oninput="calculerTotal()">
+          </div>
+          <div class="form-group">
+            <label>Quantité *</label>
+            <input type="number" id="f-quantite" placeholder="Ex : 5" step="1" min="1" value="1" oninput="calculerTotal()">
+          </div>
+          <div class="form-group">
+            <label>TVA (%)</label>
+            <input type="number" id="f-tva" value="20" step="0.1" min="0" oninput="calculerTotal()">
+          </div>
+          <div class="form-group">
+            <label>Total HT calculé</label>
+            <div class="calc-preview" id="preview-ht">—</div>
+          </div>
+          <div class="form-group">
+            <label>Total TTC calculé</label>
+            <div class="calc-preview" id="preview-ttc">—</div>
+          </div>
+          <div class="form-group">
+            <label>N° Devis fournisseur</label>
+            <input type="text" id="f-num-devis" placeholder="Ex : DEV-2026-001">
+          </div>
+          <div class="form-group">
+            <label>Statut initial</label>
+            <select id="f-statut">
+              <option value="À commander">À commander</option>
+              <option value="Commandé">Commandé</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>Observations</label>
+            <textarea id="f-observations" placeholder="Notes, précisions..."></textarea>
+          </div>
+        </div>
+
+        <!-- Ventilation analytique -->
+        <div class="ventilation-section">
+          <h4>📊 Ventilation par code analytique (si coût partagé)</h4>
+          <p style="font-size:13px; color:#888; margin-bottom:14px;">
+            Optionnel — uniquement si la commande doit être répartie sur plusieurs codes.
+          </p>
+          <div id="ventilation-rows"></div>
+          <div style="display:flex; gap:10px; margin-top:10px; align-items:center; flex-wrap:wrap;">
+            <button class="btn-secondary" onclick="addVentilationRow()" style="font-size:13px; padding:7px 14px;">＋ Ajouter un code</button>
+            <span class="ventilation-total" id="ventilation-total"></span>
+          </div>
+        </div>
+
+        <!-- Section remboursement prof (conditionnelle) -->
+        <div class="remb-section" id="remb-extra-section">
+          <h4>💳 Informations remboursement professeur</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Nom du prof *</label>
+              <input type="text" id="f-nom-prof" placeholder="Ex : M. Dupont">
+            </div>
+            <div class="form-group">
+              <label>Justificatif fourni</label>
+              <select id="f-justificatif">
+                <option value="Oui">Oui</option>
+                <option value="Non">Non</option>
+                <option value="À fournir">À fournir</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Saisi par -->
+        <div class="form-grid" style="margin-bottom:24px;">
+          <div class="form-group">
+            <label>Saisi par *</label>
+            <input type="text" id="f-saisi-par" placeholder="Votre nom">
+          </div>
+        </div>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <button class="btn-primary" onclick="soumettreCommande()" style="font-size:15px; padding:12px 32px;">
+            ✅ Enregistrer la commande
+          </button>
+          <button class="btn-secondary" onclick="resetFormulaire()">
+            🔄 Réinitialiser
+          </button>
+        </div>
+
+      </div>
+
+      <!-- ══ ONGLET 2 : LISTE DES COMMANDES ══ -->
+      <div class="content-section" id="section1">
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+          <h2 style="color:#667eea; font-size:20px;">📋 Toutes les commandes</h2>
+          <button class="btn-secondary" onclick="chargerCommandes()">🔄 Actualiser</button>
+        </div>
+
+        <!-- Filtres -->
+        <div class="table-toolbar">
+          <input type="text" class="search-input" id="search-cmd" placeholder="🔍 Rechercher (produit, fournisseur, n°...)" oninput="filtrerCommandes()">
+          <select class="filter-select" id="filter-statut" onchange="filtrerCommandes()">
+            <option value="">Tous les statuts</option>
+            <option value="À commander">À commander</option>
+            <option value="Commandé">Commandé</option>
+            <option value="Reçu partiel">Reçu partiel</option>
+            <option value="Reçu complet">Reçu complet</option>
+            <option value="Facturé">Facturé</option>
+          </select>
+          <select class="filter-select" id="filter-type" onchange="filtrerCommandes()">
+            <option value="">Tous les types</option>
+            <option value="Consommable">Consommable</option>
+            <option value="Investissement">Investissement</option>
+            <option value="Maintenance">Maintenance</option>
+            <option value="Machine">Machine</option>
+            <option value="Remboursement prof">Remboursement prof</option>
+          </select>
+          <select class="filter-select" id="filter-labo" onchange="filtrerCommandes()">
+            <option value="">Tous les labos</option>
+            <option value="Tocqueville">Tocqueville</option>
+            <option value="Saint-Pierre">Saint-Pierre</option>
+          </select>
+        </div>
+
+        <!-- Compteur -->
+        <div id="cmd-compteur" style="font-size:13px; color:#888; margin-bottom:12px;"></div>
+
+        <!-- Tableau -->
+        <div id="cmd-loading" class="loading-msg">
+          <div class="spinner"></div>
+          <p>Chargement des commandes...</p>
+        </div>
+        <div id="cmd-empty" class="empty-state" style="display:none;">
+          <div class="icon">📭</div>
+          <p>Aucune commande trouvée.</p>
+        </div>
+        <div class="table-wrapper" id="cmd-table-wrapper" style="display:none;">
+          <table>
+            <thead>
+              <tr>
+                <th>N°</th>
+                <th>Date</th>
+                <th>Labo</th>
+                <th>Type</th>
+                <th>Fournisseur</th>
+                <th>Produit</th>
+                <th>Qté</th>
+                <th>Total HT</th>
+                <th>Total TTC</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="cmd-tbody"></tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <!-- ══ ONGLET 3 : REMBOURSEMENTS ══ -->
+      <div class="content-section" id="section2">
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+          <h2 style="color:#f97316; font-size:20px;">💳 Remboursements professeurs</h2>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn-secondary" onclick="chargerRemboursements()">🔄 Actualiser</button>
+            <button class="btn-primary" onclick="switchTab(0); document.getElementById('f-type').value='Remboursement prof'; onTypeChange();">
+              ➕ Nouveau remboursement
+            </button>
+          </div>
+        </div>
+
+        <!-- Résumé -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:24px;" id="remb-stats">
+        </div>
+
+        <!-- Liste -->
+        <div id="remb-loading" class="loading-msg">
+          <div class="spinner"></div>
+          <p>Chargement...</p>
+        </div>
+        <div id="remb-empty" class="empty-state" style="display:none;">
+          <div class="icon">💳</div>
+          <p>Aucun remboursement enregistré.</p>
+        </div>
+        <div id="remb-list"></div>
+
+      </div>
+
+    </div><!-- /tab-content -->
+  </div><!-- /main-card -->
+
+</div><!-- /dashboard-container -->
+
+<!-- ══ MODAL : MODIFIER STATUT ══ -->
+<div class="modal-overlay" id="modal-statut">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>✏️ Modifier la commande</h3>
+      <button class="modal-close" onclick="closeModalStatut()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px; color:#888; margin-bottom:18px;" id="modal-cmd-info"></p>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label>Nouveau statut</label>
+        <select id="modal-statut-select" onchange="onModalStatutChange()">
+          <option value="À commander">À commander</option>
+          <option value="Commandé">Commandé</option>
+          <option value="Reçu partiel">Reçu partiel</option>
+          <option value="Reçu complet">Reçu complet</option>
+          <option value="Facturé">Facturé</option>
+        </select>
+      </div>
+      <div class="form-group" id="modal-date-cmd-group" style="display:none; margin-bottom:16px;">
+        <label>Date de commande</label>
+        <input type="date" id="modal-date-cmd">
+      </div>
+      <div class="form-group" id="modal-date-recep-group" style="display:none; margin-bottom:16px;">
+        <label>Date de réception</label>
+        <input type="date" id="modal-date-recep">
+      </div>
+      <div class="form-group" id="modal-date-fact-group" style="display:none; margin-bottom:16px;">
+        <label>Date de facture</label>
+        <input type="date" id="modal-date-fact">
+      </div>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label>Modifié par</label>
+        <input type="text" id="modal-modifie-par" placeholder="Votre nom">
+      </div>
+      <div class="form-group" style="margin-bottom:20px;">
+        <label>Observations</label>
+        <textarea id="modal-observations" placeholder="Notes..."></textarea>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn-primary" onclick="enregistrerStatut()">✅ Enregistrer</button>
+        <button class="btn-secondary" onclick="closeModalStatut()">Annuler</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL : NOUVEAU FOURNISSEUR ══ -->
+<div class="modal-overlay" id="modal-fournisseur">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🏭 Ajouter un fournisseur</h3>
+      <button class="modal-close" onclick="closeModalFournisseur()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:16px;">
+        <label>Nom du fournisseur *</label>
+        <input type="text" id="new-fourn-nom" placeholder="Ex : Sordalab">
+      </div>
+      <div class="form-group" style="margin-bottom:20px;">
+        <label>Spécialité / notes</label>
+        <input type="text" id="new-fourn-notes" placeholder="Ex : Matériel pédagogique">
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn-primary" onclick="ajouterFournisseur()">✅ Ajouter</button>
+        <button class="btn-secondary" onclick="closeModalFournisseur()">Annuler</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL : MODIFIER REMBOURSEMENT ══ -->
+<div class="modal-overlay" id="modal-remb">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>💳 Mettre à jour le remboursement</h3>
+      <button class="modal-close" onclick="closeModalRemb()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px; color:#888; margin-bottom:18px;" id="modal-remb-info"></p>
+
+      <!-- Validation DDFPT -->
+      <div id="bloc-validation" style="background:#f0fdf4; border:2px solid #10b981; border-radius:12px; padding:16px; margin-bottom:16px; display:none;">
+        <h4 style="color:#065f46; margin-bottom:12px; font-size:14px;">🔐 Validation DDFPT</h4>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>Décision</label>
+          <select id="modal-validation-select">
+            <option value="Validé">✅ Validé</option>
+            <option value="Refusé">❌ Refusé</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Validé par</label>
+          <input type="text" id="modal-valide-par" placeholder="Votre nom">
+        </div>
+      </div>
+
+      <!-- Suivi remboursement -->
+      <div class="form-group" style="margin-bottom:16px;">
+        <label>Statut du remboursement</label>
+        <select id="modal-remb-statut">
+          <option value="Rentré">Rentré</option>
+          <option value="En comptabilité">En comptabilité</option>
+          <option value="Payé">Payé</option>
+        </select>
+      </div>
+      <div class="form-group" id="modal-remb-date-group" style="margin-bottom:16px; display:none;">
+        <label>Date de remboursement</label>
+        <input type="date" id="modal-remb-date">
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn-primary" onclick="enregistrerRemboursement()">✅ Enregistrer</button>
+        <button class="btn-secondary" onclick="closeModalRemb()">Annuler</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz0YhttoQXXJbVbeQy7mouasxoRAuf5f2X5S0Bvy7g32qdGmsRESI21faBkFet1GVv7/exec";
+
+let tvaDefaut = 20;
+let prefixeAnnee = "26";
+let dernierNumero = 0;
+let commandes = [];
+let codesAna = [];
+let modalNumeroEnCours = "";
+let modalRembNumeroEnCours = "";
+let currentUser = "";
+let isResponsable = false;
+
+// ── INIT ────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  const user = localStorage.getItem("labUser");
+  if (!user) { window.location.href = "login.html"; return; }
+  currentUser = user;
+  document.getElementById("userBadge").textContent = "👤 " + user;
+
+  // Détection DDFPT (à adapter selon ton système de login)
+  const role = localStorage.getItem("labRole") || "";
+  isResponsable = (role === "ddfpt" || role === "responsable");
+
+  document.getElementById("f-saisi-par").value = user;
+  document.getElementById("modal-modifie-par").value = user;
+  document.getElementById("modal-valide-par").value = user;
+
+  chargerParams();
+  chargerFournisseurs();
+  chargerCodesAna();
+});
+
+function logout() {
+  localStorage.clear();
+  window.location.href = "login.html";
+}
+
+function switchTab(idx) {
+  document.querySelectorAll(".tab-button").forEach((b, i) => b.classList.toggle("active", i === idx));
+  document.querySelectorAll(".content-section").forEach((s, i) => s.classList.toggle("active", i === idx));
+  if (idx === 1) chargerCommandes();
+  if (idx === 2) chargerRemboursements();
+}
+
+// ── API ─────────────────────────────────────────────────────
+async function apiGet(action) {
+  const url = `${APPS_SCRIPT_URL}?action=${action}&t=${Date.now()}`;
+  const resp = await fetch(url);
+  return await resp.json();
+}
+
+async function apiPost(data) {
+  const resp = await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+  return await resp.json();
+}
+
+// ── CHARGEMENT PARAMS ───────────────────────────────────────
+async function chargerParams() {
+  try {
+    const data = await apiGet("getParams");
+    tvaDefaut = data.tva || 20;
+    prefixeAnnee = data.prefixeAnnee || "26";
+    dernierNumero = parseInt(data.dernierNumero) || 0;
+    document.getElementById("f-tva").value = tvaDefaut;
+    const next = prefixeAnnee + "-" + String(dernierNumero + 1).padStart(2, "0");
+    document.getElementById("nextNumPreview").textContent = "N° à venir : " + next;
+  } catch (e) {
+    console.error("Erreur params :", e);
+  }
+}
+
+async function chargerFournisseurs() {
+  try {
+    const data = await apiGet("getFournisseurs");
+    const sel = document.getElementById("f-fournisseur");
+    sel.innerHTML = '<option value="">— Sélectionner —</option>';
+    data.sort().forEach(f => {
+      const opt = document.createElement("option");
+      opt.value = f; opt.textContent = f;
+      sel.appendChild(opt);
+    });
+  } catch (e) { console.error("Erreur fournisseurs :", e); }
+}
+
+async function chargerCodesAna() {
+  try {
+    const data = await apiGet("getCodesAnalytiques");
+    codesAna = data;
+    const sel = document.getElementById("f-code-ana");
+    sel.innerHTML = '<option value="">— Sélectionner —</option>';
+    data.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c; opt.textContent = c;
+      sel.appendChild(opt);
+    });
+  } catch (e) { console.error("Erreur codes analytiques :", e); }
+}
+
+// ── FORMULAIRE COMMANDE ─────────────────────────────────────
+function onTypeChange() {
+  const type = document.getElementById("f-type").value;
+  const rembSection = document.getElementById("remb-extra-section");
+  rembSection.style.display = (type === "Remboursement prof") ? "block" : "none";
+}
+
+function calculerTotal() {
+  const prix = parseFloat(document.getElementById("f-prix").value) || 0;
+  const qte  = parseFloat(document.getElementById("f-quantite").value) || 0;
+  const tva  = parseFloat(document.getElementById("f-tva").value) || 0;
+  const mode = document.getElementById("f-saisie-en").value;
+
+  let prixHT = prix;
+  if (mode === "TTC") prixHT = prix / (1 + tva / 100);
+
+  const totalHT  = prixHT * qte;
+  const totalTTC = totalHT * (1 + tva / 100);
+
+  document.getElementById("preview-ht").textContent  = totalHT  > 0 ? totalHT.toFixed(2)  + " €" : "—";
+  document.getElementById("preview-ttc").textContent = totalTTC > 0 ? totalTTC.toFixed(2) + " €" : "—";
+
+  majVentilationTotal(totalHT);
+}
+
+// Ventilation analytique
+function addVentilationRow() {
+  const container = document.getElementById("ventilation-rows");
+  const idx = container.children.length;
+  const row = document.createElement("div");
+  row.className = "ventilation-row";
+  row.innerHTML = `
+    <select class="vent-code" onchange="majVentilationTotal(null)">
+      <option value="">— Code —</option>
+      ${codesAna.map(c => `<option value="${c}">${c}</option>`).join("")}
+    </select>
+    <input type="number" class="vent-montant" placeholder="Montant HT (€)" step="0.01" min="0"
+      oninput="majVentilationTotal(null)">
+    <input type="text" class="vent-note" placeholder="Note (optionnel)">
+    <button class="btn-danger" onclick="this.parentElement.remove(); majVentilationTotal(null);" style="padding:6px 12px;">✕</button>
+  `;
+  container.appendChild(row);
+}
+
+function majVentilationTotal(totalHTForce) {
+  const totalHTEl = document.getElementById("preview-ht").textContent;
+  const totalHT = totalHTForce !== null ? totalHTForce
+    : (parseFloat(totalHTEl) || 0);
+
+  let somme = 0;
+  document.querySelectorAll(".vent-montant").forEach(inp => {
+    somme += parseFloat(inp.value) || 0;
+  });
+
+  const el = document.getElementById("ventilation-total");
+  if (document.querySelectorAll(".vent-montant").length === 0) { el.textContent = ""; return; }
+
+  const diff = totalHT - somme;
+  el.textContent = `Total ventilé : ${somme.toFixed(2)} € / ${totalHT.toFixed(2)} € (écart : ${diff.toFixed(2)} €)`;
+  el.className = "ventilation-total " + (Math.abs(diff) < 0.01 ? "ok" : "ko");
+}
+
+async function soumettreCommande() {
+  // Validation
+  const reqFields = [
+    { id: "f-labo", label: "Laboratoire" },
+    { id: "f-type", label: "Type" },
+    { id: "f-fournisseur", label: "Fournisseur" },
+    { id: "f-produit", label: "Désignation du produit" },
+    { id: "f-prix", label: "Prix unitaire" },
+    { id: "f-saisi-par", label: "Saisi par" },
+  ];
+  for (const f of reqFields) {
+    if (!document.getElementById(f.id).value.trim()) {
+      showNotif("⚠️ Champ obligatoire manquant : " + f.label, "error");
+      document.getElementById(f.id).focus();
+      return;
+    }
+  }
+
+  // Ventilation
+  const ventRows = [];
+  document.querySelectorAll(".ventilation-row").forEach(row => {
+    const code = row.querySelector(".vent-code").value;
+    const montant = row.querySelector(".vent-montant").value;
+    const note = row.querySelector(".vent-note").value;
+    if (code && montant) ventRows.push({ code, montant, notes: note });
+  });
+
+  const payload = {
+    action:          "addCommande",
+    laboratoire:     document.getElementById("f-labo").value,
+    type:            document.getElementById("f-type").value,
+    fournisseur:     document.getElementById("f-fournisseur").value,
+    codeAnalytique:  document.getElementById("f-code-ana").value,
+    produit:         document.getElementById("f-produit").value,
+    reference:       document.getElementById("f-reference").value,
+    conditionnement: document.getElementById("f-conditionnement").value,
+    saisieEn:        document.getElementById("f-saisie-en").value,
+    prixUnitaire:    document.getElementById("f-prix").value,
+    quantite:        document.getElementById("f-quantite").value,
+    tva:             document.getElementById("f-tva").value,
+    numDevis:        document.getElementById("f-num-devis").value,
+    statut:          document.getElementById("f-statut").value,
+    observations:    document.getElementById("f-observations").value,
+    saisiPar:        document.getElementById("f-saisi-par").value,
+    nomProf:         document.getElementById("f-nom-prof").value,
+    justificatif:    document.getElementById("f-justificatif").value,
+    ventilation:     ventRows
+  };
+
+  try {
+    showNotif("⏳ Enregistrement en cours...", "success");
+    const result = await apiPost(payload);
+    if (result.success) {
+      showNotif("✅ Commande " + result.numero + " enregistrée !", "success");
+      resetFormulaire();
+      await chargerParams();
+    } else {
+      showNotif("❌ Erreur : " + (result.error || "inconnue"), "error");
+    }
+  } catch (e) {
+    showNotif("❌ Erreur réseau. Vérifiez votre connexion.", "error");
+    console.error(e);
+  }
+}
+
+function resetFormulaire() {
+  ["f-labo","f-type","f-fournisseur","f-code-ana","f-produit","f-reference",
+   "f-conditionnement","f-num-devis","f-observations","f-nom-prof"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+  document.getElementById("f-saisie-en").value = "HT";
+  document.getElementById("f-prix").value = "";
+  document.getElementById("f-quantite").value = "1";
+  document.getElementById("f-tva").value = tvaDefaut;
+  document.getElementById("f-statut").value = "À commander";
+  document.getElementById("f-justificatif").value = "Oui";
+  document.getElementById("preview-ht").textContent = "—";
+  document.getElementById("preview-ttc").textContent = "—";
+  document.getElementById("ventilation-rows").innerHTML = "";
+  document.getElementById("ventilation-total").textContent = "";
+  document.getElementById("remb-extra-section").style.display = "none";
+}
+
+// ── LISTE COMMANDES ─────────────────────────────────────────
+async function chargerCommandes() {
+  document.getElementById("cmd-loading").style.display = "block";
+  document.getElementById("cmd-table-wrapper").style.display = "none";
+  document.getElementById("cmd-empty").style.display = "none";
+
+  try {
+    commandes = await apiGet("getCommandes");
+    afficherCommandes(commandes);
+  } catch (e) {
+    console.error("Erreur chargement commandes :", e);
+    document.getElementById("cmd-loading").innerHTML = '<p style="color:#ef4444;">❌ Erreur de chargement. Vérifiez la connexion.</p>';
+  }
+}
+
+function filtrerCommandes() {
+  const search = document.getElementById("search-cmd").value.toLowerCase();
+  const statut = document.getElementById("filter-statut").value;
+  const type   = document.getElementById("filter-type").value;
+  const labo   = document.getElementById("filter-labo").value;
+
+  const filtered = commandes.filter(c => {
+    const matchSearch = !search ||
+      (c.numero || "").toLowerCase().includes(search) ||
+      (c.produit || "").toLowerCase().includes(search) ||
+      (c.fournisseur || "").toLowerCase().includes(search) ||
+      (c.reference || "").toLowerCase().includes(search);
+    const matchStatut = !statut || c.statut === statut;
+    const matchType   = !type   || c.type === type;
+    const matchLabo   = !labo   || c.laboratoire === labo;
+    return matchSearch && matchStatut && matchType && matchLabo;
+  });
+
+  afficherCommandes(filtered);
+}
+
+function afficherCommandes(data) {
+  document.getElementById("cmd-loading").style.display = "none";
+
+  if (!data || data.length === 0) {
+    document.getElementById("cmd-empty").style.display = "block";
+    document.getElementById("cmd-table-wrapper").style.display = "none";
+    document.getElementById("cmd-compteur").textContent = "0 commande";
+    return;
+  }
+
+  document.getElementById("cmd-empty").style.display = "none";
+  document.getElementById("cmd-table-wrapper").style.display = "block";
+  document.getElementById("cmd-compteur").textContent = data.length + " commande(s)";
+
+  const tbody = document.getElementById("cmd-tbody");
+  tbody.innerHTML = data.map(c => `
+    <tr>
+      <td><strong>${c.numero || "—"}</strong></td>
+      <td style="white-space:nowrap;">${c.date || "—"}</td>
+      <td><span style="font-size:12px;">${c.laboratoire || "—"}</span></td>
+      <td>${badgeType(c.type)}</td>
+      <td>${c.fournisseur || "—"}</td>
+      <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.produit || ""}">${c.produit || "—"}</td>
+      <td style="text-align:right;">${c.quantite || "—"}</td>
+      <td style="text-align:right; white-space:nowrap;">${c.totalHT ? parseFloat(c.totalHT).toFixed(2) + " €" : "—"}</td>
+      <td style="text-align:right; white-space:nowrap;">${c.totalTTC ? parseFloat(c.totalTTC).toFixed(2) + " €" : "—"}</td>
+      <td>${badgeStatut(c.statut)}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn-success" onclick="openModalStatut('${c.numero}', '${(c.produit||"").replace(/'/g,"\\'")}', '${c.statut||""}')">✏️</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function badgeStatut(statut) {
+  const map = {
+    "À commander":  "badge-commander",
+    "Commandé":     "badge-commande",
+    "Reçu partiel": "badge-recu-part",
+    "Reçu complet": "badge-recu-comp",
+    "Facturé":      "badge-facture"
+  };
+  return `<span class="badge ${map[statut] || ""}">${statut || "—"}</span>`;
+}
+
+function badgeType(type) {
+  const map = {
+    "Consommable":        "type-consommable",
+    "Investissement":     "type-investissement",
+    "Maintenance":        "type-maintenance",
+    "Machine":            "type-machine",
+    "Remboursement prof": "type-remb"
+  };
+  return `<span class="badge-type ${map[type] || ""}">${type || "—"}</span>`;
+}
+
+// ── MODAL STATUT ─────────────────────────────────────────────
+function openModalStatut(numero, produit, statutActuel) {
+  modalNumeroEnCours = numero;
+  document.getElementById("modal-cmd-info").textContent = `${numero} — ${produit}`;
+  document.getElementById("modal-statut-select").value = statutActuel || "À commander";
+  document.getElementById("modal-modifie-par").value = currentUser;
+  document.getElementById("modal-observations").value = "";
+  onModalStatutChange();
+  document.getElementById("modal-statut").classList.add("open");
+}
+
+function closeModalStatut() {
+  document.getElementById("modal-statut").classList.remove("open");
+}
+
+function onModalStatutChange() {
+  const s = document.getElementById("modal-statut-select").value;
+  document.getElementById("modal-date-cmd-group").style.display   = (s === "Commandé")                          ? "block" : "none";
+  document.getElementById("modal-date-recep-group").style.display = (s === "Reçu partiel" || s === "Reçu complet") ? "block" : "none";
+  document.getElementById("modal-date-fact-group").style.display  = (s === "Facturé")                           ? "block" : "none";
+}
+
+async function enregistrerStatut() {
+  const payload = {
+    action:         "updateStatutCommande",
+    numero:         modalNumeroEnCours,
+    statut:         document.getElementById("modal-statut-select").value,
+    dateCommande:   document.getElementById("modal-date-cmd").value,
+    dateReception:  document.getElementById("modal-date-recep").value,
+    dateFacture:    document.getElementById("modal-date-fact").value,
+    modifiePar:     document.getElementById("modal-modifie-par").value,
+    observations:   document.getElementById("modal-observations").value
+  };
+  try {
+    const result = await apiPost(payload);
+    if (result.success) {
+      showNotif("✅ Statut mis à jour !", "success");
+      closeModalStatut();
+      chargerCommandes();
+    } else {
+      showNotif("❌ Erreur : " + (result.error || "inconnue"), "error");
+    }
+  } catch (e) {
+    showNotif("❌ Erreur réseau.", "error");
+  }
+}
+
+// ── MODAL FOURNISSEUR ────────────────────────────────────────
+function showAddFournisseur() {
+  document.getElementById("new-fourn-nom").value = "";
+  document.getElementById("new-fourn-notes").value = "";
+  document.getElementById("modal-fournisseur").classList.add("open");
+}
+function closeModalFournisseur() {
+  document.getElementById("modal-fournisseur").classList.remove("open");
+}
+
+async function ajouterFournisseur() {
+  const nom = document.getElementById("new-fourn-nom").value.trim();
+  if (!nom) { showNotif("⚠️ Saisir un nom de fournisseur.", "error"); return; }
+
+  try {
+    const result = await apiPost({
+      action: "addFournisseur",
+      nom: nom,
+      notes: document.getElementById("new-fourn-notes").value
+    });
+    if (result.success) {
+      showNotif("✅ " + nom + " ajouté !", "success");
+      closeModalFournisseur();
+      await chargerFournisseurs();
+      document.getElementById("f-fournisseur").value = nom;
+    } else {
+      showNotif("ℹ️ " + (result.message || "Déjà existant."), "error");
+    }
+  } catch (e) {
+    showNotif("❌ Erreur réseau.", "error");
+  }
+}
+
+// ── REMBOURSEMENTS ───────────────────────────────────────────
+async function chargerRemboursements() {
+  document.getElementById("remb-loading").style.display = "block";
+  document.getElementById("remb-empty").style.display = "none";
+  document.getElementById("remb-list").innerHTML = "";
+
+  try {
+    const data = await apiGet("getRemboursements");
+    document.getElementById("remb-loading").style.display = "none";
+
+    // Stats
+    const total      = data.reduce((s, r) => s + (parseFloat(r.montant) || 0), 0);
+    const payes      = data.filter(r => r.statutRemboursement === "Payé").reduce((s, r) => s + (parseFloat(r.montant) || 0), 0);
+    const enAttente  = data.filter(r => r.statutRemboursement === "En comptabilité").length;
+    const nonValides = data.filter(r => r.statutValidation === "En attente validation").length;
+
+    document.getElementById("remb-stats").innerHTML = `
+      <div style="background:linear-gradient(135deg,rgba(249,115,22,0.1),rgba(249,115,22,0.05));border:2px solid #f97316;border-radius:14px;padding:16px;text-align:center;">
+        <div style="font-size:24px;font-weight:800;color:#f97316;">${total.toFixed(2)} €</div>
+        <div style="font-size:12px;color:#888;margin-top:4px;">Total demandé</div>
+      </div>
+      <div style="background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(16,185,129,0.05));border:2px solid #10b981;border-radius:14px;padding:16px;text-align:center;">
+        <div style="font-size:24px;font-weight:800;color:#10b981;">${payes.toFixed(2)} €</div>
+        <div style="font-size:12px;color:#888;margin-top:4px;">Remboursé</div>
+      </div>
+      <div style="background:linear-gradient(135deg,rgba(102,126,234,0.1),rgba(102,126,234,0.05));border:2px solid #667eea;border-radius:14px;padding:16px;text-align:center;">
+        <div style="font-size:24px;font-weight:800;color:#667eea;">${enAttente}</div>
+        <div style="font-size:12px;color:#888;margin-top:4px;">En comptabilité</div>
+      </div>
+      <div style="background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(239,68,68,0.05));border:2px solid #ef4444;border-radius:14px;padding:16px;text-align:center;">
+        <div style="font-size:24px;font-weight:800;color:#ef4444;">${nonValides}</div>
+        <div style="font-size:12px;color:#888;margin-top:4px;">En attente validation</div>
+      </div>
+    `;
+
+    if (data.length === 0) {
+      document.getElementById("remb-empty").style.display = "block";
+      return;
+    }
+
+    document.getElementById("remb-list").innerHTML = data.map(r => `
+      <div class="remb-card">
+        <div class="remb-card-header">
+          <div>
+            <div class="remb-card-num">${r.numero || "—"}</div>
+            <div class="remb-card-title">${r.nomProf || "—"} — ${r.produit || "—"}</div>
+            <div class="remb-card-meta">${r.laboratoire || ""} · ${r.fournisseur || ""} · saisi par ${r.saisiPar || "?"} le ${r.date || "?"}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="remb-card-amount">${r.montant ? parseFloat(r.montant).toFixed(2) + " €" : "—"}</div>
+            <span class="remb-badge-valid ${badgeValidClass(r.statutValidation)}">${r.statutValidation || "—"}</span>
+          </div>
+        </div>
+        <div class="suivi-bar" style="margin-bottom:12px;">
+          <div class="suivi-step ${suiviClass(r.statutRemboursement, 'Rentré')}">📥 Rentré</div>
+          <div class="suivi-arrow">→</div>
+          <div class="suivi-step ${suiviClass(r.statutRemboursement, 'En comptabilité')}">📑 En comptabilité</div>
+          <div class="suivi-arrow">→</div>
+          <div class="suivi-step ${suiviClass(r.statutRemboursement, 'Payé')}">✅ Payé</div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <button class="btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="openModalRemb('${r.numero}', '${r.nomProf||""}', '${r.statutValidation||""}', '${r.statutRemboursement||""}')">
+            ✏️ Mettre à jour
+          </button>
+          ${r.justificatif === "Oui" ? '<span style="font-size:12px;color:#10b981;">📎 Justificatif reçu</span>' : '<span style="font-size:12px;color:#ef4444;">⚠️ Justificatif manquant</span>'}
+          ${r.codeAnalytique ? `<span style="font-size:11px;background:#e0e7ff;color:#3730a3;padding:3px 10px;border-radius:10px;">${r.codeAnalytique}</span>` : ""}
+        </div>
+      </div>
+    `).join("");
+
+  } catch (e) {
+    document.getElementById("remb-loading").innerHTML = '<p style="color:#ef4444;">❌ Erreur de chargement.</p>';
+    console.error(e);
+  }
+}
+
+function badgeValidClass(s) {
+  if (s === "Validé") return "valid-valide";
+  if (s === "Refusé") return "valid-refuse";
+  return "valid-attente";
+}
+
+function suiviClass(statut, etape) {
+  const ordre = ["Rentré", "En comptabilité", "Payé"];
+  const si = ordre.indexOf(statut);
+  const ei = ordre.indexOf(etape);
+  if (si > ei) return "done";
+  if (si === ei) return "active";
+  return "";
+}
+
+function openModalRemb(numero, nomProf, statutVal, statutRemb) {
+  modalRembNumeroEnCours = numero;
+  document.getElementById("modal-remb-info").textContent = `${numero} — ${nomProf}`;
+  document.getElementById("modal-remb-statut").value = statutRemb || "Rentré";
+  document.getElementById("modal-validation-select").value = "Validé";
+  document.getElementById("modal-valide-par").value = currentUser;
+
+  // Bloc validation visible seulement pour le responsable
+  document.getElementById("bloc-validation").style.display = isResponsable ? "block" : "none";
+
+  // Afficher date si Payé
+  const dateGroup = document.getElementById("modal-remb-date-group");
+  dateGroup.style.display = (statutRemb === "Payé") ? "block" : "none";
+  document.getElementById("modal-remb-statut").onchange = function() {
+    dateGroup.style.display = (this.value === "Payé") ? "block" : "none";
+  };
+
+  document.getElementById("modal-remb").classList.add("open");
+}
+
+function closeModalRemb() {
+  document.getElementById("modal-remb").classList.remove("open");
+}
+
+async function enregistrerRemboursement() {
+  const payload = {
+    action:              "updateRemboursement",
+    numero:              modalRembNumeroEnCours,
+    statutRemboursement: document.getElementById("modal-remb-statut").value,
+    dateRemboursement:   document.getElementById("modal-remb-date").value,
+  };
+
+  // Validation DDFPT si responsable
+  if (isResponsable) {
+    const valPayload = {
+      action:           "validerRemboursement",
+      numero:           modalRembNumeroEnCours,
+      statutValidation: document.getElementById("modal-validation-select").value,
+      validePar:        document.getElementById("modal-valide-par").value
+    };
+    await apiPost(valPayload);
+  }
+
+  try {
+    const result = await apiPost(payload);
+    if (result.success) {
+      showNotif("✅ Remboursement mis à jour !", "success");
+      closeModalRemb();
+      chargerRemboursements();
+    } else {
+      showNotif("❌ Erreur : " + (result.error || "inconnue"), "error");
+    }
+  } catch (e) {
+    showNotif("❌ Erreur réseau.", "error");
+  }
+}
+
+// ── NOTIFICATION ─────────────────────────────────────────────
+function showNotif(msg, type) {
+  const notif = document.createElement("div");
+  notif.className = "notif " + type;
+  notif.textContent = msg;
+  document.body.appendChild(notif);
+  setTimeout(() => notif.remove(), 3500);
+}
+</script>
+
+</body>
+</html>

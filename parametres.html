@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laboratoire - Paramètres</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 20px;
+}
+.dashboard-container { max-width: 900px; margin: 0 auto; animation: slideIn 0.5s ease-out; }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── HEADER ── */
+.header {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  padding: 20px 25px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.header-top { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.header-left img, .header-right img { height: 55px; object-fit: contain; }
+.header-center { display: flex; align-items: center; justify-content: center; text-align: center; flex: 1; }
+.header-center h1 { color: #667eea; font-size: 26px; }
+.header-center p { color: #666; font-size: 13px; margin-top: 4px; }
+.user-info {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; padding: 10px 0 2px; border-top: 1px solid #f0f0f0; flex-wrap: wrap;
+}
+.user-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white; padding: 7px 18px; border-radius: 20px; font-size: 14px; font-weight: 600;
+}
+.btn-nav {
+  background: #fff; border: 2px solid #667eea; color: #667eea;
+  padding: 7px 18px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all 0.3s ease; text-decoration: none; display: inline-block;
+}
+.btn-nav:hover { background: #667eea; color: white; transform: translateY(-2px); }
+
+/* ── ACCÈS REFUSÉ ── */
+.acces-refuse {
+  background: white; border-radius: 20px; padding: 60px 40px;
+  text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+.acces-refuse .icon { font-size: 64px; margin-bottom: 20px; }
+.acces-refuse h2 { color: #ef4444; font-size: 24px; margin-bottom: 12px; }
+.acces-refuse p { color: #666; font-size: 15px; }
+
+/* ── CARTES ── */
+.card {
+  background: white; border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  padding: 30px; margin-bottom: 20px;
+}
+.card h2 {
+  color: #667eea; font-size: 18px; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 10px;
+}
+.card .subtitle { color: #888; font-size: 13px; margin-bottom: 24px; }
+
+/* ── FORM ── */
+.form-group { margin-bottom: 22px; }
+.form-group label {
+  display: block; font-size: 13px; font-weight: 700;
+  color: #444; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;
+}
+.form-group .label-sub { font-size: 11px; color: #aaa; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.input-row { display: flex; gap: 10px; align-items: center; }
+.form-group input {
+  flex: 1; padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 12px;
+  font-size: 14px; font-family: monospace; transition: border-color 0.2s;
+}
+.form-group input:focus { outline: none; border-color: #667eea; }
+.form-group input.valid   { border-color: #10b981; background: #f0fdf4; }
+.form-group input.invalid { border-color: #ef4444; background: #fff1f1; }
+.form-group .hint {
+  font-size: 12px; color: #888; margin-top: 6px; padding-left: 4px;
+}
+.form-group .status-ok  { color: #10b981; font-weight: 600; }
+.form-group .status-err { color: #ef4444; font-weight: 600; }
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white; border: none; padding: 12px 28px; border-radius: 12px;
+  font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.3s ease;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(102,126,234,0.4); }
+.btn-primary:disabled { opacity: 0.5; pointer-events: none; }
+
+.btn-test {
+  background: white; border: 2px solid #667eea; color: #667eea;
+  padding: 11px 18px; border-radius: 12px; font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: all 0.2s;
+}
+.btn-test:hover { background: #667eea; color: white; }
+
+/* ── APERÇU ── */
+.apercu {
+  background: #f8f9fa; border-radius: 12px; padding: 16px 20px;
+  margin-top: 16px; display: none;
+}
+.apercu.show { display: block; }
+.apercu h4 { font-size: 13px; font-weight: 700; color: #667eea; margin-bottom: 10px; }
+.apercu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.apercu-item { background: white; border-radius: 8px; padding: 12px 14px; }
+.apercu-item .lbl { font-size: 11px; color: #aaa; margin-bottom: 4px; text-transform: uppercase; }
+.apercu-item .val { font-size: 15px; font-weight: 700; color: #333; }
+.apercu-item .val.green { color: #10b981; }
+
+/* ── HISTORIQUE ── */
+.history-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; background: #f8f9fa; border-radius: 10px; margin-bottom: 8px;
+  font-size: 13px;
+}
+.history-item .labo { font-weight: 700; color: #667eea; }
+.history-item .annee { color: #888; }
+.history-item .date-set { color: #aaa; font-size: 11px; }
+.btn-restore {
+  background: white; border: 1.5px solid #667eea; color: #667eea;
+  padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-restore:hover { background: #667eea; color: white; }
+
+/* ── NOTIF ── */
+.notif {
+  position: fixed; top: 24px; right: 24px;
+  padding: 14px 22px; border-radius: 12px; font-size: 14px;
+  font-weight: 600; color: white; z-index: 2000;
+  animation: notifIn 0.3s ease; max-width: 360px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.notif.success { background: #10b981; }
+.notif.error   { background: #ef4444; }
+@keyframes notifIn {
+  from { opacity: 0; transform: translateX(60px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── SECTION DANGER ── */
+.danger-zone {
+  border: 2px solid #ef4444; border-radius: 16px; padding: 20px; margin-top: 8px;
+}
+.danger-zone h3 { color: #ef4444; font-size: 15px; margin-bottom: 12px; }
+.danger-zone p { font-size: 13px; color: #666; margin-bottom: 14px; }
+
+@media (max-width: 600px) {
+  body { padding: 10px; }
+  .header-left img, .header-right img { height: 40px; }
+  .header-center h1 { font-size: 18px; }
+  .apercu-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="dashboard-container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="header-left"><img src="logo-notre-dame.png" alt="Notre-Dame Les Oiseaux"></div>
+      <div class="header-center">
+        <div>
+          <h1>⚙️ Paramètres</h1>
+          <p>Administration — Accès DDFPT uniquement</p>
+        </div>
+      </div>
+      <div class="header-right"><img src="logo-ndo-sup.png" alt="NDO Sup"></div>
+    </div>
+    <div class="user-info">
+      <span class="user-badge" id="userBadge">Utilisateur</span>
+      <a href="dashboard.html" class="btn-nav">🏠 Tableau de bord</a>
+      <a href="commandes.html" class="btn-nav">📦 Commandes</a>
+      <a href="budget.html" class="btn-nav">📊 Budget</a>
+      <button class="btn-nav" onclick="logout()">🚪 Déconnexion</button>
+    </div>
+  </div>
+
+  <!-- ACCÈS REFUSÉ (affiché si pas DDFPT) -->
+  <div class="acces-refuse" id="acces-refuse" style="display:none;">
+    <div class="icon">🔒</div>
+    <h2>Accès restreint</h2>
+    <p>Cette page est réservée au DDFPT.<br>Contactez l'administrateur si vous pensez avoir accès.</p>
+  </div>
+
+  <!-- CONTENU PRINCIPAL -->
+  <div id="contenu-admin" style="display:none;">
+
+    <!-- ── GOOGLE SHEETS ANNÉE EN COURS ── -->
+    <div class="card">
+      <h2>📋 Google Sheets — Année en cours</h2>
+      <p class="subtitle">Collez les IDs des deux fichiers Google Sheets pour l'année scolaire active. L'application lira automatiquement ces fichiers.</p>
+
+      <!-- Saint-Pierre -->
+      <div class="form-group">
+        <label>
+          🏛️ Saint-Pierre
+          <span class="label-sub"> — ID du Google Sheet</span>
+        </label>
+        <div class="input-row">
+          <input type="text" id="id-saint-pierre"
+            placeholder="Ex : 1OhgQoeoMAIx3LEnVwlLFPOWqJKt96vtNNCF-vED8wng">
+          <button class="btn-test" onclick="testerSheet('saint-pierre')">🔍 Tester</button>
+        </div>
+        <div class="hint" id="hint-saint-pierre"></div>
+        <div class="apercu" id="apercu-saint-pierre">
+          <h4>📊 Aperçu du fichier</h4>
+          <div class="apercu-grid" id="apercu-grid-saint-pierre"></div>
+        </div>
+      </div>
+
+      <!-- Tocqueville -->
+      <div class="form-group">
+        <label>
+          🏛️ Tocqueville
+          <span class="label-sub"> — ID du Google Sheet</span>
+        </label>
+        <div class="input-row">
+          <input type="text" id="id-tocqueville"
+            placeholder="Ex : 1oF4EZmSLzLrZARt_CKuVmYcEsvgBaZCg11UDDbTkUoQ">
+          <button class="btn-test" onclick="testerSheet('tocqueville')">🔍 Tester</button>
+        </div>
+        <div class="hint" id="hint-tocqueville"></div>
+        <div class="apercu" id="apercu-tocqueville">
+          <h4>📊 Aperçu du fichier</h4>
+          <div class="apercu-grid" id="apercu-grid-tocqueville"></div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px; margin-top:8px; flex-wrap:wrap;">
+        <button class="btn-primary" onclick="sauvegarder()">✅ Sauvegarder</button>
+        <button class="btn-nav" onclick="chargerValeursSauvegardees()" style="font-size:13px;">↩️ Annuler</button>
+      </div>
+    </div>
+
+    <!-- ── HISTORIQUE DES SHEETS ── -->
+    <div class="card">
+      <h2>📅 Historique des années</h2>
+      <p class="subtitle">Fichiers Google Sheets des années précédentes. Cliquez "Restaurer" pour y revenir temporairement.</p>
+      <div id="historique-list">
+        <p style="color:#aaa; font-size:13px; text-align:center; padding:20px 0;">Aucun historique pour l'instant.</p>
+      </div>
+    </div>
+
+    <!-- ── INFOS SYSTÈME ── -->
+    <div class="card">
+      <h2>ℹ️ Informations système</h2>
+      <p class="subtitle">Référence des IDs et URLs actuellement configurés.</p>
+      <div style="background:#f8f9fa; border-radius:12px; padding:16px 20px; font-family:monospace; font-size:13px; line-height:2;">
+        <div><strong>Saint-Pierre ID :</strong> <span id="info-sp" style="color:#667eea;">—</span></div>
+        <div><strong>Tocqueville ID :</strong>  <span id="info-tq" style="color:#667eea;">—</span></div>
+        <div><strong>Dernière MAJ :</strong>     <span id="info-date" style="color:#888;">—</span></div>
+        <div><strong>Apps Script URL :</strong>  <span style="color:#888; font-size:11px;">https://script.google.com/macros/s/AKfycbz0YhttoQXXJbVbeQy7mouasxoRAuf5f2X5S0Bvy7g32qdGmsRESI21faBkFet1GVv7/exec</span></div>
+      </div>
+      <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+        <a href="https://docs.google.com/spreadsheets/d/" id="link-sp" target="_blank" class="btn-nav" style="font-size:12px;">🔗 Ouvrir Saint-Pierre</a>
+        <a href="https://docs.google.com/spreadsheets/d/" id="link-tq" target="_blank" class="btn-nav" style="font-size:12px;">🔗 Ouvrir Tocqueville</a>
+      </div>
+    </div>
+
+    <!-- ── ZONE DANGER ── -->
+    <div class="card">
+      <h2>⚠️ Zone d'administration</h2>
+      <p class="subtitle">Actions irréversibles — à utiliser avec précaution.</p>
+      <div class="danger-zone">
+        <h3>🗑️ Réinitialiser la configuration</h3>
+        <p>Efface tous les IDs sauvegardés et l'historique. L'application ne pourra plus lire les Google Sheets jusqu'à ce que vous renseigniez de nouveaux IDs.</p>
+        <button class="btn-nav" style="border-color:#ef4444; color:#ef4444;"
+          onclick="if(confirm('Êtes-vous sûr ? Cette action efface tous les paramètres.')) reinitialiser();">
+          🗑️ Réinitialiser
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /contenu-admin -->
+</div>
+
+<script>
+// ── CONSTANTES ───────────────────────────────────────────────
+const DDFPT_USER = "m.cirefice";
+const KEY_SP     = "labSheetSaintPierre";
+const KEY_TQ     = "labSheetTocqueville";
+const KEY_HIST   = "labSheetHistorique";
+const KEY_DATE   = "labSheetDate";
+
+// ── INIT ─────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  const user = localStorage.getItem("loggedUser");
+  if (!user) { window.location.href = "login.html"; return; }
+
+  document.getElementById("userBadge").textContent = "👤 " + user;
+
+  if (user !== DDFPT_USER) {
+    document.getElementById("acces-refuse").style.display = "block";
+    return;
+  }
+
+  document.getElementById("contenu-admin").style.display = "block";
+  chargerValeursSauvegardees();
+  afficherHistorique();
+  majInfosSysteme();
+});
+
+function logout() { localStorage.clear(); window.location.href = "login.html"; }
+
+// ── CHARGEMENT ───────────────────────────────────────────────
+function chargerValeursSauvegardees() {
+  const sp = localStorage.getItem(KEY_SP) || "";
+  const tq = localStorage.getItem(KEY_TQ) || "";
+  document.getElementById("id-saint-pierre").value = sp;
+  document.getElementById("id-tocqueville").value  = tq;
+  if (sp) { document.getElementById("id-saint-pierre").classList.add("valid"); }
+  if (tq) { document.getElementById("id-tocqueville").classList.add("valid"); }
+}
+
+function majInfosSysteme() {
+  const sp   = localStorage.getItem(KEY_SP)   || "Non configuré";
+  const tq   = localStorage.getItem(KEY_TQ)   || "Non configuré";
+  const date = localStorage.getItem(KEY_DATE)  || "—";
+  document.getElementById("info-sp").textContent   = sp;
+  document.getElementById("info-tq").textContent   = tq;
+  document.getElementById("info-date").textContent = date;
+  if (sp !== "Non configuré") {
+    document.getElementById("link-sp").href = "https://docs.google.com/spreadsheets/d/" + sp;
+    document.getElementById("link-tq").href = "https://docs.google.com/spreadsheets/d/" + tq;
+  }
+}
+
+// ── TEST CONNEXION ───────────────────────────────────────────
+async function testerSheet(labo) {
+  const input = document.getElementById(`id-${labo}`);
+  const hint  = document.getElementById(`hint-${labo}`);
+  const apercu = document.getElementById(`apercu-${labo}`);
+  const grid   = document.getElementById(`apercu-grid-${labo}`);
+  const id = input.value.trim();
+
+  if (!id) {
+    hint.innerHTML = '<span class="status-err">⚠️ Veuillez saisir un ID.</span>';
+    return;
+  }
+
+  hint.innerHTML = '⏳ Connexion en cours...';
+  input.classList.remove("valid", "invalid");
+  apercu.classList.remove("show");
+
+  try {
+    // On lit l'onglet Récapitulatif via gviz
+    const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=R%C3%A9capitulatif&t=${Date.now()}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error("Fichier inaccessible");
+    const text = await resp.text();
+    if (!text || text.includes("Moved Temporarily")) throw new Error("Accès refusé ou fichier introuvable");
+
+    const lines = text.trim().split("\n");
+    // Chercher le total général dans l'onglet Paramétrage
+    const urlParam = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=Param%C3%A9trage&t=${Date.now()}`;
+    const respP = await fetch(urlParam);
+    const textP = await respP.text();
+    const linesP = textP.trim().split("\n");
+
+    // Extraire infos basiques
+    let nomLabo = "—", annee = "—", nbFournisseurs = 0;
+    linesP.forEach(line => {
+      if (line.includes("Laboratoire,")) {
+        const parts = line.split(",");
+        if (parts[1]) nomLabo = parts[1].replace(/"/g, "").trim();
+      }
+      if (line.includes("Année scolaire,")) {
+        const parts = line.split(",");
+        if (parts[1]) annee = parts[1].replace(/"/g, "").trim();
+      }
+    });
+
+    // Compter les lignes fournisseurs dans le récap (lignes avec un numéro)
+    nbFournisseurs = lines.filter(l => /^"?\d+"?,/.test(l)).length;
+
+    input.classList.add("valid");
+    hint.innerHTML = `<span class="status-ok">✅ Connexion réussie — ${nomLabo}</span>`;
+
+    grid.innerHTML = `
+      <div class="apercu-item"><div class="lbl">Laboratoire</div><div class="val green">${nomLabo}</div></div>
+      <div class="apercu-item"><div class="lbl">Année scolaire</div><div class="val">${annee}</div></div>
+      <div class="apercu-item"><div class="lbl">Fournisseurs</div><div class="val">${nbFournisseurs}</div></div>
+      <div class="apercu-item"><div class="lbl">ID</div><div class="val" style="font-size:11px;font-family:monospace;color:#888;">${id.substring(0,20)}...</div></div>
+    `;
+    apercu.classList.add("show");
+
+  } catch (e) {
+    input.classList.add("invalid");
+    hint.innerHTML = `<span class="status-err">❌ Erreur : ${e.message}. Vérifiez l'ID et que le fichier est partagé en lecture.</span>`;
+    apercu.classList.remove("show");
+  }
+}
+
+// ── SAUVEGARDE ───────────────────────────────────────────────
+function sauvegarder() {
+  const sp = document.getElementById("id-saint-pierre").value.trim();
+  const tq = document.getElementById("id-tocqueville").value.trim();
+
+  if (!sp || !tq) {
+    showNotif("⚠️ Les deux IDs sont obligatoires.", "error");
+    return;
+  }
+
+  // Archiver l'ancien avant d'écraser
+  const ancienSP   = localStorage.getItem(KEY_SP);
+  const ancienTQ   = localStorage.getItem(KEY_TQ);
+  const ancienDate = localStorage.getItem(KEY_DATE);
+  if (ancienSP && ancienTQ && (ancienSP !== sp || ancienTQ !== tq)) {
+    ajouterHistorique(ancienSP, ancienTQ, ancienDate);
+  }
+
+  const maintenant = new Date().toLocaleString("fr-FR");
+  localStorage.setItem(KEY_SP,   sp);
+  localStorage.setItem(KEY_TQ,   tq);
+  localStorage.setItem(KEY_DATE, maintenant);
+
+  majInfosSysteme();
+  afficherHistorique();
+  showNotif("✅ Paramètres sauvegardés !", "success");
+}
+
+// ── HISTORIQUE ───────────────────────────────────────────────
+function ajouterHistorique(sp, tq, date) {
+  let hist = JSON.parse(localStorage.getItem(KEY_HIST) || "[]");
+  hist.unshift({ sp, tq, date });
+  if (hist.length > 10) hist = hist.slice(0, 10); // garder 10 max
+  localStorage.setItem(KEY_HIST, JSON.stringify(hist));
+}
+
+function afficherHistorique() {
+  const hist = JSON.parse(localStorage.getItem(KEY_HIST) || "[]");
+  const el = document.getElementById("historique-list");
+  if (!hist.length) {
+    el.innerHTML = '<p style="color:#aaa; font-size:13px; text-align:center; padding:20px 0;">Aucun historique pour l\'instant.</p>';
+    return;
+  }
+  el.innerHTML = hist.map((h, i) => `
+    <div class="history-item">
+      <div>
+        <span class="labo">Archivé le ${h.date || "—"}</span><br>
+        <span class="annee" style="font-size:11px;font-family:monospace;">SP: ${(h.sp||"").substring(0,24)}...</span><br>
+        <span class="annee" style="font-size:11px;font-family:monospace;">TQ: ${(h.tq||"").substring(0,24)}...</span>
+      </div>
+      <button class="btn-restore" onclick="restaurer(${i})">↩️ Restaurer</button>
+    </div>
+  `).join("");
+}
+
+function restaurer(idx) {
+  const hist = JSON.parse(localStorage.getItem(KEY_HIST) || "[]");
+  if (!hist[idx]) return;
+  document.getElementById("id-saint-pierre").value = hist[idx].sp;
+  document.getElementById("id-tocqueville").value  = hist[idx].tq;
+  showNotif("↩️ Valeurs restaurées — cliquez Sauvegarder pour confirmer.", "success");
+}
+
+function reinitialiser() {
+  localStorage.removeItem(KEY_SP);
+  localStorage.removeItem(KEY_TQ);
+  localStorage.removeItem(KEY_DATE);
+  localStorage.removeItem(KEY_HIST);
+  document.getElementById("id-saint-pierre").value = "";
+  document.getElementById("id-tocqueville").value  = "";
+  document.getElementById("id-saint-pierre").classList.remove("valid","invalid");
+  document.getElementById("id-tocqueville").classList.remove("valid","invalid");
+  document.getElementById("apercu-saint-pierre").classList.remove("show");
+  document.getElementById("apercu-tocqueville").classList.remove("show");
+  majInfosSysteme();
+  afficherHistorique();
+  showNotif("🗑️ Configuration réinitialisée.", "error");
+}
+
+// ── NOTIF ────────────────────────────────────────────────────
+function showNotif(msg, type) {
+  const n = document.createElement("div");
+  n.className = "notif " + type;
+  n.textContent = msg;
+  document.body.appendChild(n);
+  setTimeout(() => n.remove(), 3500);
+}
+</script>
+</body>
+</html>

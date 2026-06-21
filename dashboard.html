@@ -568,11 +568,14 @@
                 <button class="tab-button" onclick="switchTab(3)">
                     🔭 Conversions Optiques
                 </button>
-                <button class="tab-button" onclick="switchTab(4)">
-                    📋 Onglet 5
+                <button class="tab-button" onclick="window.location.href='maintenance.html'">
+                    🛠️ Maintenance
                 </button>
-                <button class="tab-button" onclick="switchTab(5)">
-                    📋 Onglet 6
+                <button class="tab-button" onclick="window.location.href='commandes.html'">
+                    📦 Commandes
+                </button>
+                <button class="tab-button" onclick="window.location.href='budget.html'">
+                    📊 Budget &amp; Suivi
                 </button>
             </div>
 
@@ -1703,24 +1706,6 @@
                     </div>
                 </div>
 
-                <!-- Contenu Onglet 5 -->
-                <div class="content-section" id="section4">
-                    <div class="info-card">
-                        <h2>📋 Onglet 5</h2>
-                        <p>Section disponible pour extension future.</p>
-                        <span class="coming-soon">À configurer</span>
-                    </div>
-                </div>
-
-                <!-- Contenu Onglet 6 -->
-                <div class="content-section" id="section5">
-                    <div class="info-card">
-                        <h2>📋 Onglet 6</h2>
-                        <p>Section disponible pour extension future.</p>
-                        <span class="coming-soon">À configurer</span>
-                    </div>
-                </div>
-
             </div>
         </div>
     </div>
@@ -1850,6 +1835,12 @@
             // Charger les déchets au démarrage
             loadWasteData();
             startWasteAutoRefresh();
+            // Si on arrive depuis une autre page avec ?tab=N, activer cet onglet
+            const params = new URLSearchParams(window.location.search);
+            const tabParam = parseInt(params.get('tab'), 10);
+            if (!isNaN(tabParam) && tabParam >= 0 && tabParam <= 3) {
+                switchTab(tabParam);
+            }
         });
 
         function logout() {

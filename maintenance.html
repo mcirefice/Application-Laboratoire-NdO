@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratoire - Maintenance</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 20px 25px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .header-left, .header-right { display: flex; align-items: center; flex-shrink: 0; }
+        .header-left img, .header-right img { height: 55px; object-fit: contain; }
+
+        .header-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            flex: 1;
+        }
+
+        .header-center h1 { color: #667eea; font-size: 26px; margin: 0; }
+        .header-center p { color: #666; font-size: 13px; margin: 4px 0 0 0; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 10px 0 2px;
+            border-top: 1px solid #f0f0f0;
+            flex-wrap: wrap;
+        }
+
+        .user-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 7px 18px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .btn-logout {
+            background: #fff;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 7px 18px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-logout:hover { background: #667eea; color: white; transform: translateY(-2px); }
+
+        .tabs-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .tabs-nav {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+            flex-wrap: wrap;
+        }
+
+        .tab-button {
+            flex: 1;
+            min-width: 130px;
+            padding: 20px 10px;
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .tab-button:hover { background: rgba(102, 126, 234, 0.1); color: #667eea; }
+        .tab-button.active { color: #667eea; background: white; }
+
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .tab-content { padding: 40px; min-height: 400px; }
+
+        .info-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            padding: 40px 30px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px dashed #667eea;
+        }
+
+        .info-card .icon { font-size: 48px; margin-bottom: 10px; }
+        .info-card h2 { color: #667eea; font-size: 24px; margin-bottom: 14px; }
+        .info-card p { color: #666; font-size: 16px; line-height: 1.7; max-width: 560px; margin: 0 auto 8px; }
+
+        .coming-soon {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 18px;
+        }
+
+        .next-steps {
+            text-align: left;
+            max-width: 520px;
+            margin: 24px auto 0;
+            background: white;
+            border-radius: 12px;
+            padding: 18px 22px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.08);
+        }
+        .next-steps h3 { color: #667eea; font-size: 14px; margin-bottom: 10px; }
+        .next-steps ul { padding-left: 20px; color: #444; font-size: 14px; line-height: 1.8; }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .header { padding: 15px; gap: 10px; }
+            .header-left img, .header-right img { height: 40px; }
+            .header-center h1 { font-size: 18px; }
+            .header-center p { font-size: 11px; }
+            .tabs-nav { flex-direction: column; }
+            .tab-button { border-bottom: 1px solid #e0e0e0; padding: 14px; font-size: 14px; }
+            .tab-content { padding: 15px; }
+        }
+
+        @media (max-width: 400px) {
+            .header-center h1 { font-size: 15px; }
+            .header-left img, .header-right img { height: 32px; }
+            .user-badge, .btn-logout { font-size: 13px; padding: 6px 14px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <div class="header-top">
+                <div class="header-left">
+                    <img src="logo-notre-dame.png" alt="Notre-Dame Les Oiseaux">
+                </div>
+                <div class="header-center">
+                    <div>
+                        <h1>🔬 Laboratoire</h1>
+                        <p>Tableau de bord - Gestion d'équipe</p>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <img src="logo-ndo-sup.png" alt="NDO Sup">
+                </div>
+            </div>
+            <div class="user-info">
+                <span class="user-badge" id="userBadge">Utilisateur</span>
+                <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
+            </div>
+        </div>
+
+        <div class="tabs-container">
+            <div class="tabs-nav">
+                <button class="tab-button" onclick="window.location.href='dashboard.html?tab=0'">♻️ Gestion des Déchets</button>
+                <button class="tab-button" onclick="window.location.href='dashboard.html?tab=1'">🧪 Préparation TP</button>
+                <button class="tab-button" onclick="window.location.href='dashboard.html?tab=2'">📚 Préparations Particulières</button>
+                <button class="tab-button" onclick="window.location.href='dashboard.html?tab=3'">🔭 Conversions Optiques</button>
+                <button class="tab-button active" onclick="window.location.href='maintenance.html'">🛠️ Maintenance</button>
+                <button class="tab-button " onclick="window.location.href='commandes.html'">📦 Commandes</button>
+                <button class="tab-button " onclick="window.location.href='budget.html'">📊 Budget &amp; Suivi</button>
+            </div>
+
+            <div class="tab-content">
+                <div class="info-card">
+                    <div class="icon">🛠️</div>
+                    <h2>Maintenance des appareils</h2>
+                    <p>Vision complète des maintenances internes et externes du parc d'appareils des deux laboratoires, avec alertes par échéance et cartes de contrôle.</p>
+                    <span class="coming-soon">🚧 En construction</span>
+                    <div class="next-steps">
+                        <h3>À venir sur cette page :</h3>
+                        <ul>
+                            <li>Grille des appareils avec pastille de statut (🟢 à jour / 🟠 à prévoir / 🔴 en retard)</li>
+                            <li>Fiche détaillée par appareil (clic sur une carte) avec historique et infos générales</li>
+                            <li>Carte de contrôle graphique pour les appareils concernés (ex: viscosimètres Brookfield)</li>
+                            <li>Suivi des résines de traitement d'eau (conductivité / pH)</li>
+                            <li>Tableau des contrats de maintenance externe</li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', function() {
+            const loggedUser = localStorage.getItem('loggedUser');
+            if (!loggedUser) { window.location.href = 'login.html'; return; }
+            document.getElementById('userBadge').textContent = loggedUser;
+        });
+
+        function logout() {
+            if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
+                localStorage.removeItem('loggedUser');
+                localStorage.removeItem('loginTime');
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+</body>
+</html>

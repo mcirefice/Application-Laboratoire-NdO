@@ -452,14 +452,39 @@
             return future.length ? future[0].debut : null;
         }
 
-        function computeSuivi(dateDerniereStr, valeurStr, uniteStr, vacances) {
+        function normalizeApostrophe(s) {
+            return (s || '').replace(/[’ʼ´`]/g, "'").trim();
+        }
+
+        // "Fin d'année scolaire" : 1×/an, calé sur l'été, en ignorant l'été imminent
+        // (s'il est dans les BUFFER_DAYS qui suivent la dernière maintenance, on considère
+        // qu'il vient justement d'être traité par cette maintenance).
+        function nextFinAnneeAfter(date, vacances) {
+            const BUFFER_DAYS = 45;
+            const bufferDate = new Date(date.getTime() + BUFFER_DAYS * 86400000);
+            const etes = vacances
+                .filter(v => v.debut && v.periode && v.periode.toLowerCase().includes('été'))
+                .filter(v => v.debut.getTime() > bufferDate.getTime())
+                .sort((a, b) => a.debut - b.debut);
+            if (etes.length) return { echeance: etes[0].debut, estimated: false };
+            const estimated = new Date(date.getTime());
+            estimated.setFullYear(estimated.getFullYear() + 1);
+            return { echeance: estimated, estimated: true };
+        }
+
+        function computeSuivi(dateDerniereStr, valeurStr, uniteStrRaw, vacances) {
             const dateDerniere = parseDateAny(dateDerniereStr);
+            const uniteStr = normalizeApostrophe(uniteStrRaw);
             if (!uniteStr) return { active: false, statut: 'gris' };
             if (!dateDerniere) return { active: true, statut: 'gris', echeance: null };
-            let echeance;
+            let echeance, note;
             if (uniteStr === 'Vacances scolaires') {
                 echeance = nextVacanceAfter(dateDerniere, vacances);
                 if (!echeance) return { active: true, statut: 'gris', echeance: null, note: 'calendrier des vacances incomplet' };
+            } else if (uniteStr === "Fin d'année scolaire") {
+                const r = nextFinAnneeAfter(dateDerniere, vacances);
+                echeance = r.echeance;
+                if (r.estimated) note = "échéance estimée à +12 mois (été de l'année prochaine pas encore dans le calendrier)";
             } else {
                 const val = parseFloat(valeurStr);
                 if (isNaN(val)) return { active: true, statut: 'gris', echeance: null };
@@ -468,7 +493,7 @@
             const today = new Date(); today.setHours(0, 0, 0, 0);
             const joursRestants = Math.ceil((echeance.getTime() - today.getTime()) / 86400000);
             let statut = joursRestants < 0 ? 'rouge' : (joursRestants <= 30 ? 'orange' : 'vert');
-            return { active: true, statut, echeance, joursRestants, dateDerniere };
+            return { active: true, statut, echeance, joursRestants, dateDerniere, note };
         }
 
         // ===== ÉTAT GLOBAL =====

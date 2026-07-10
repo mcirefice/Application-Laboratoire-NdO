@@ -74,6 +74,8 @@ function getRegistreSheet(sheetName) {
 /**
  * Enregistre une nouvelle commande : une ligne dans "Commandes" +
  * une ligne par item dans "Détail". Statut initial : "À commander".
+ * Génère aussi automatiquement un Google Doc récapitulatif, nommé
+ * "{orderId} - {fournisseur}", et enregistre son lien dans le registre.
  * payload attendu : { site, fournisseur, creePar, items: [
  *   { designation, reference, quantite, prixUnitaire, typeDepense, codeAnalytique }
  * ]}
@@ -94,6 +96,7 @@ function saveOrder(payload) {
     orderId, now, payload.site, payload.fournisseur, payload.creePar || '',
     items.length, totalHT, totalTTC, 'À commander', now, ''
   ]);
+  const newRow = cmdSheet.getLastRow();
 
   const detailSheet = getRegistreSheet('Détail');
   items.forEach(it => {
@@ -104,7 +107,74 @@ function saveOrder(payload) {
     ]);
   });
 
-  return { orderId: orderId, totalHT: totalHT, totalTTC: totalTTC };
+  // Génération du document récapitulatif — ne bloque pas l'enregistrement
+  // de la commande si elle échoue (la commande reste sauvegardée quoi qu'il arrive).
+  let docUrl = '';
+  try {
+    docUrl = generateOrderDoc(orderId, payload, items, totalHT, totalTTC, now);
+    cmdSheet.getRange(newRow, 11).setValue(docUrl); // colonne K = "Lien Doc généré"
+  } catch (docErr) {
+    Logger.log('Erreur génération du document pour ' + orderId + ' : ' + docErr.message);
+  }
+
+  return { orderId: orderId, totalHT: totalHT, totalTTC: totalTTC, docUrl: docUrl };
+}
+
+/**
+ * Récupère (ou crée si absent) le dossier Drive dédié aux documents
+ * de commandes générés, pour ne pas les laisser à la racine du Drive.
+ */
+function getOrCreateDocsFolder() {
+  const FOLDER_NAME = 'Commandes_Documents_Labo';
+  const folders = DriveApp.getFoldersByName(FOLDER_NAME);
+  if (folders.hasNext()) return folders.next();
+  return DriveApp.createFolder(FOLDER_NAME);
+}
+
+/**
+ * Crée un Google Doc récapitulatif pour une commande, nommé
+ * "{orderId} - {fournisseur}". Version simple sans charte graphique —
+ * à personnaliser dès qu'un modèle officiel est défini.
+ */
+function generateOrderDoc(orderId, payload, items, totalHT, totalTTC, dateCreation) {
+  const folder = getOrCreateDocsFolder();
+  const docName = orderId + ' - ' + payload.fournisseur;
+  const doc = DocumentApp.create(docName);
+  const body = doc.getBody();
+
+  body.appendParagraph('Bon de commande').setHeading(DocumentApp.ParagraphHeading.TITLE);
+  body.appendParagraph(payload.fournisseur).setHeading(DocumentApp.ParagraphHeading.HEADING2);
+
+  const dateStr = Utilities.formatDate(dateCreation, Session.getScriptTimeZone(), 'dd/MM/yyyy à HH:mm');
+  body.appendParagraph('Site : ' + payload.site);
+  body.appendParagraph('N° commande : ' + orderId);
+  body.appendParagraph('Date : ' + dateStr);
+  body.appendParagraph('Créé par : ' + (payload.creePar || '—'));
+  body.appendParagraph('');
+
+  const tableData = [['Désignation', 'Référence', 'Qté', 'Prix unit. HT', 'Total HT']];
+  items.forEach(it => {
+    const ligneTotal = (it.prixUnitaire || 0) * (it.quantite || 0);
+    tableData.push([
+      it.designation, it.reference || '', String(it.quantite),
+      (it.prixUnitaire || 0).toFixed(2) + ' €', ligneTotal.toFixed(2) + ' €'
+    ]);
+  });
+  body.appendTable(tableData);
+
+  body.appendParagraph('');
+  const pTotalHT = body.appendParagraph('Total HT : ' + totalHT.toFixed(2) + ' €');
+  pTotalHT.editAsText().setBold(true);
+  const pTotalTTC = body.appendParagraph('Total TTC (TVA 20%) : ' + totalTTC.toFixed(2) + ' €');
+  pTotalTTC.editAsText().setBold(true);
+
+  doc.saveAndClose();
+
+  const file = DriveApp.getFileById(doc.getId());
+  folder.addFile(file);
+  DriveApp.getRootFolder().removeFile(file); // évite le doublon à la racine du Drive
+
+  return file.getUrl();
 }
 
 function doPost(e) {

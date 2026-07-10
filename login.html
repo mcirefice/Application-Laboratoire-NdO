@@ -208,7 +208,7 @@ loginForm.addEventListener('submit', async function(e) {
     localStorage.setItem('loginTime', new Date().toISOString());
 
     loginForm.style.opacity = '0';
-    setTimeout(() => { window.location.href = 'dashboard.html'; }, 300);
+    setTimeout(() => { window.location.href = 'dechets.html'; }, 300);
   } else {
     errorMessage.textContent = 'Code d\'accès incorrect';
     errorMessage.classList.add('show');
@@ -220,7 +220,7 @@ loginForm.addEventListener('submit', async function(e) {
 // Déjà connecté ?
 window.addEventListener('load', function() {
   if (localStorage.getItem('loggedUser')) {
-    window.location.href = 'dashboard.html';
+    window.location.href = 'dechets.html';
   }
 });
 </script>

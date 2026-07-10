@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- saved from url=(0054)file:///C:/Users/m.cirefice/Downloads/commandes_1.html -->
-<html lang="fr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Laboratoire - Commandes</title>
-    <link rel="stylesheet" href="file:///C:/Users/m.cirefice/assets/common.css">
+    <link rel="stylesheet" href="../assets/common.css">
     <style>
         .cmd-toolbar {
             display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;
@@ -41,11 +41,11 @@
     <div class="dashboard-container">
         <div class="header">
             <div class="header-top">
-                <div class="header-left"><img src="file:///C:/Users/m.cirefice/logo-notre-dame.png" alt="Notre-Dame Les Oiseaux"></div>
+                <div class="header-left"><img src="../logo-notre-dame.png" alt="Notre-Dame Les Oiseaux"></div>
                 <div class="header-center">
                     <div><h1>🔬 Laboratoire</h1><p>Tableau de bord - Gestion d'équipe</p></div>
                 </div>
-                <div class="header-right"><img src="file:///C:/Users/m.cirefice/logo-ndo-sup.png" alt="NDO Sup"></div>
+                <div class="header-right"><img src="../logo-ndo-sup.png" alt="NDO Sup"></div>
             </div>
             <div class="user-info">
                 <span class="user-badge" id="userBadge">Utilisateur</span>
@@ -71,7 +71,7 @@
                         </div>
                         <div class="input-group">
                             <label>Fournisseur</label>
-                            <select id="fournisseurSelect" onchange="onFournisseurChange()" disabled="">
+                            <select id="fournisseurSelect" onchange="onFournisseurChange()" disabled>
                                 <option value="">— Choisir un site d'abord —</option>
                             </select>
                         </div>
@@ -108,7 +108,7 @@
                             <div id="cmdCount" style="font-size:14px;opacity:0.85;">0 item sélectionné</div>
                             <div class="total" id="cmdTotal">0,00 € HT</div>
                         </div>
-                        <button class="btn-save-order" id="btnSaveOrder" disabled="" onclick="saveOrder()">
+                        <button class="btn-save-order" id="btnSaveOrder" disabled onclick="saveOrder()">
                             💾 Enregistrer la commande
                         </button>
                     </div>
@@ -117,8 +117,8 @@
         </div>
     </div>
 
-    <script src="file:///C:/Users/m.cirefice/assets/nav.config.js"></script>
-    <script src="file:///C:/Users/m.cirefice/assets/common.js"></script>
+    <script src="../assets/nav.config.js"></script>
+    <script src="../assets/common.js"></script>
     <script>
         /* ── Configuration des sites (les IDs restent côté script, pas ici) ── */
         const SITES = {
@@ -261,7 +261,9 @@
                     site: siteKey, fournisseur: fournisseur, creePar: creePar, items: items
                 });
                 if (!res.success) throw new Error(res.error || 'Erreur script');
-                alert(`✅ Commande ${res.data.orderId} enregistrée (${items.length} items, ${res.data.totalHT.toFixed(2)} € HT).`);
+                const docLine = res.data.docUrl ? `\n📄 Document généré : ${res.data.docUrl}` : '\n⚠️ Document non généré (voir avec l\'administrateur).';
+                alert(`✅ Commande ${res.data.orderId} enregistrée (${items.length} items, ${res.data.totalHT.toFixed(2)} € HT).${docLine}`);
+                if (res.data.docUrl) window.open(res.data.docUrl, '_blank');
                 onFournisseurChange();
             } catch (err) {
                 console.error(err);
@@ -285,6 +287,5 @@
             return div.innerHTML;
         }
     </script>
-
-
-</body></html>
+</body>
+</html>

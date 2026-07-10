@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratoire - Préparations Particulières</title>
+    <link rel="stylesheet" href="../assets/common.css">
+    <style>
+        .prep-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px;
+        }
+        .prep-tile {
+            background: white; border: 2px solid #e8eaf6; border-radius: 14px;
+            padding: 16px 12px 14px; cursor: pointer; transition: all 0.22s ease;
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            text-align: center; min-height: 110px; justify-content: center;
+        }
+        .prep-tile:hover { border-color: #667eea; box-shadow: 0 4px 16px rgba(102,126,234,0.18); transform: translateY(-3px); }
+        .prep-tile-name { font-size: 14px; font-weight: 700; color: #333; line-height: 1.3; }
+        .prep-tile-pictos { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; }
+        .prep-tile-pictos img { width: 32px; height: 32px; object-fit: contain; }
+
+        .prep-modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+            z-index: 1000; align-items: center; justify-content: center; padding: 16px;
+        }
+        .prep-modal-overlay.open { display: flex; }
+        .prep-modal {
+            background: white; border-radius: 20px; width: 100%; max-width: 600px;
+            max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: modalIn 0.22s ease;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.93) translateY(20px); }
+            to   { opacity: 1; transform: scale(1)   translateY(0);     }
+        }
+        .prep-modal-header {
+            position: sticky; top: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px 24px 16px; border-radius: 20px 20px 0 0;
+            display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+        }
+        .prep-modal-title { color: white; font-size: 20px; font-weight: 700; line-height: 1.3; flex: 1; }
+        .prep-modal-close {
+            background: rgba(255,255,255,0.2); border: none; color: white; width: 34px; height: 34px;
+            border-radius: 50%; font-size: 18px; cursor: pointer; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; transition: background 0.2s;
+        }
+        .prep-modal-close:hover { background: rgba(255,255,255,0.35); }
+        .prep-modal-pictos { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px 24px 0; }
+        .prep-modal-pictos img { width: 56px; height: 56px; object-fit: contain; }
+        .prep-modal-body { padding: 20px 24px 28px; }
+        .prep-modal-section { margin-bottom: 20px; }
+        .prep-modal-section-title {
+            font-weight: 700; color: #667eea; font-size: 13px; text-transform: uppercase;
+            letter-spacing: 0.05em; margin-bottom: 8px;
+        }
+        .prep-modal-section-content { color: #444; line-height: 1.8; white-space: pre-line; font-size: 15px; }
+        .prep-modal-protocol {
+            background: #f4f5ff; border-left: 4px solid #667eea; border-radius: 0 10px 10px 0; padding: 14px 16px;
+        }
+        .prep-modal-protocol ol { margin: 0; padding-left: 20px; }
+        .prep-modal-protocol li { color: #444; line-height: 1.8; font-size: 15px; margin-bottom: 4px; }
+        .prep-modal-category {
+            display: inline-block; background: #f0f0ff; color: #667eea; border-radius: 20px;
+            padding: 4px 14px; font-size: 12px; font-weight: 600; margin-bottom: 16px;
+        }
+
+        .category-btn {
+            padding: 12px 24px; background: white; color: #667eea; border: 2px solid #667eea;
+            border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+        }
+        .category-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); }
+        .category-btn.active { background: #667eea; color: white; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <div class="header-top">
+                <div class="header-left"><img src="../logo-notre-dame.png" alt="Notre-Dame Les Oiseaux"></div>
+                <div class="header-center">
+                    <div><h1>🔬 Laboratoire</h1><p>Tableau de bord - Gestion d'équipe</p></div>
+                </div>
+                <div class="header-right"><img src="../logo-ndo-sup.png" alt="NDO Sup"></div>
+            </div>
+            <div class="user-info">
+                <span class="user-badge" id="userBadge">Utilisateur</span>
+                <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
+            </div>
+        </div>
+
+        <div class="tabs-container">
+            <div class="tabs-nav" id="tabsNav"></div>
+
+            <div class="tab-content">
+                <div class="content-section active" id="sectionPreparations">
+                    <h2 style="color: #667eea; margin-bottom: 20px; text-align: center;">
+                        📚 Préparations Particulières
+                    </h2>
+                    <div style="max-width: 800px; margin: 0 auto 20px;">
+                        <div style="position: relative;">
+                            <input type="text" id="globalSearchInput"
+                                placeholder="🔍 Rechercher dans toutes les préparations..."
+                                style="width:100%;padding:15px 20px;border:2px solid #667eea;border-radius:10px;font-size:16px;"
+                                oninput="globalSearchPreparations()">
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px;">
+                            <div id="searchResultsCount" style="color:#666;font-size:14px;"></div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                <button onclick="loadAllPreparations()" class="btn-refresh">🔄 Rafraîchir</button>
+                                <button onclick="openNewPreparationSheet()" class="btn-add-preparation">➕ Nouvelle préparation</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:30px;">
+                        <button class="category-btn active" onclick="selectCategory('Tampons')">🧪 Tampons</button>
+                        <button class="category-btn" onclick="selectCategory('Indicateurs colorés')">🎨 Indicateurs</button>
+                        <button class="category-btn" onclick="selectCategory('Tests identification')">🔬 Tests</button>
+                        <button class="category-btn" onclick="selectCategory('Éluants CCM')">📊 Éluants CCM</button>
+                        <button class="category-btn" onclick="selectCategory('Révélateurs CCM')">🖼️ Révélateurs CCM</button>
+                        <button class="category-btn" onclick="selectCategory('Autres')">📋 Autres</button>
+                    </div>
+                    <div id="preparationsContainer" style="max-width:1000px;margin:0 auto;">
+                        <p style="text-align:center;color:#999;">Chargement des préparations...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="prep-modal-overlay" id="prepModalOverlay" onclick="closePrepModal(event)">
+        <div class="prep-modal" id="prepModal">
+            <div class="prep-modal-header">
+                <div class="prep-modal-title" id="modalTitle"></div>
+                <button class="prep-modal-close" onclick="closePrepModalDirect()">✕</button>
+            </div>
+            <div id="modalPictos" class="prep-modal-pictos"></div>
+            <div class="prep-modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <script src="../assets/nav.config.js"></script>
+    <script src="../assets/common.js"></script>
+    <script>
+        window.addEventListener('load', function () {
+            const user = initModulePage('preparations');
+            if (!user) return;
+            loadAllPreparations();
+        });
+
+        const PREP_SHEET_ID = '1Hwy94cpJxufLrDiB3fI5DD58LE1A0-2r2reu-ELZ_A0';
+        const PREP_CATEGORIES = ['Tampons', 'Indicateurs colorés', 'Tests identification', 'Éluants CCM', 'Révélateurs CCM', 'Autres'];
+        let allPreparations = [];
+        let currentCategory = 'Tampons';
+        let isSearching = false;
+
+        function openNewPreparationSheet() {
+            window.open(`https://docs.google.com/spreadsheets/d/${PREP_SHEET_ID}/edit`, '_blank');
+        }
+
+        async function loadAllPreparations() {
+            allPreparations = [];
+            for (const category of PREP_CATEGORIES) {
+                try {
+                    const rows = await fetchSheetCSV(PREP_SHEET_ID, category);
+                    const preps = parsePreparationRows(rows, category);
+                    allPreparations = allPreparations.concat(preps);
+                } catch (error) { console.error(`Erreur ${category}:`, error); }
+            }
+            displayPreparations();
+        }
+
+        function parsePreparationRows(rows, category) {
+            const preparations = [];
+            for (let i = 1; i < rows.length; i++) {
+                const values = rows[i];
+                if (values.length >= 4 && values[0]) {
+                    const prep = {
+                        nom: values[0] || '', utilisation: values[1] || '',
+                        composition: values[2] || '', protocole: values[3] || '',
+                        pictogrammes: [], category: category
+                    };
+                    if (values[4] && values[4].trim()) {
+                        prep.pictogrammes = values[4].trim().toLowerCase().split(/\s+/).filter(p => p && p.startsWith('sgh'));
+                    }
+                    preparations.push(prep);
+                }
+            }
+            return preparations;
+        }
+
+        function selectCategory(category) {
+            currentCategory = category;
+            isSearching = false;
+            document.getElementById('globalSearchInput').value = '';
+            document.getElementById('searchResultsCount').textContent = '';
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.includes(category.split(' ')[0])) btn.classList.add('active');
+            });
+            displayPreparations();
+        }
+
+        function globalSearchPreparations() {
+            const searchTerm = document.getElementById('globalSearchInput').value.toLowerCase();
+            if (searchTerm.length === 0) {
+                isSearching = false;
+                document.getElementById('searchResultsCount').textContent = '';
+                displayPreparations();
+                return;
+            }
+            isSearching = true;
+            displayPreparations(searchTerm);
+        }
+
+        function displayPreparations(searchTerm = '') {
+            const container = document.getElementById('preparationsContainer');
+            let preps = allPreparations;
+            if (isSearching && searchTerm) {
+                preps = allPreparations.filter(p =>
+                    p.nom.toLowerCase().includes(searchTerm) ||
+                    p.utilisation.toLowerCase().includes(searchTerm) ||
+                    p.composition.toLowerCase().includes(searchTerm) ||
+                    p.protocole.toLowerCase().includes(searchTerm)
+                );
+                document.getElementById('searchResultsCount').textContent = `${preps.length} préparation(s) trouvée(s)`;
+            } else {
+                preps = allPreparations.filter(p => p.category === currentCategory);
+                document.getElementById('searchResultsCount').textContent = '';
+            }
+            if (preps.length === 0) {
+                container.innerHTML = '<p style="text-align:center;color:#999;padding:30px 0;">Aucune préparation trouvée.</p>';
+                return;
+            }
+            let html = '<div class="prep-grid">';
+            preps.forEach((prep, idx) => {
+                let pictosHTML = '';
+                if (prep.pictogrammes && prep.pictogrammes.length > 0) {
+                    pictosHTML = '<div class="prep-tile-pictos">';
+                    prep.pictogrammes.forEach(code => { pictosHTML += displayPictogram(code, 32); });
+                    pictosHTML += '</div>';
+                }
+                html += `<div class="prep-tile" onclick="openPrepModal(${idx}, ${JSON.stringify(isSearching)})">${pictosHTML}<div class="prep-tile-name">${prep.nom}</div></div>`;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+            container._currentPreps = preps;
+        }
+
+        function openPrepModal(idx, searching) {
+            const container = document.getElementById('preparationsContainer');
+            const preps = container._currentPreps;
+            if (!preps || !preps[idx]) return;
+            const prep = preps[idx];
+            document.getElementById('modalTitle').textContent = '🧪 ' + prep.nom;
+            let pictosHTML = '';
+            if (prep.pictogrammes && prep.pictogrammes.length > 0) {
+                prep.pictogrammes.forEach(code => { pictosHTML += displayPictogram(code, 56); });
+            }
+            document.getElementById('modalPictos').innerHTML = pictosHTML;
+            let bodyHTML = '';
+            if (searching) bodyHTML += `<div class="prep-modal-category">${prep.category}</div>`;
+            if (prep.utilisation) bodyHTML += `<div class="prep-modal-section"><div class="prep-modal-section-title">📝 Utilisation</div><div class="prep-modal-section-content">${prep.utilisation}</div></div>`;
+            if (prep.composition) bodyHTML += `<div class="prep-modal-section"><div class="prep-modal-section-title">🧪 Composition</div><div class="prep-modal-section-content">${prep.composition}</div></div>`;
+            if (prep.protocole) {
+                const etapes = prep.protocole.split('\n').filter(e => e.trim());
+                if (etapes.length > 0) {
+                    bodyHTML += `<div class="prep-modal-section"><div class="prep-modal-section-title">📋 Protocole</div><div class="prep-modal-protocol"><ol>${etapes.map(e => `<li>${e}</li>`).join('')}</ol></div></div>`;
+                }
+            }
+            document.getElementById('modalBody').innerHTML = bodyHTML;
+            document.getElementById('prepModalOverlay').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePrepModal(event) {
+            if (event.target === document.getElementById('prepModalOverlay')) closePrepModalDirect();
+        }
+
+        function closePrepModalDirect() {
+            document.getElementById('prepModalOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closePrepModalDirect(); });
+    </script>
+</body>
+</html>

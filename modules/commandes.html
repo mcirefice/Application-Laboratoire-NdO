@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<!-- saved from url=(0054)file:///C:/Users/m.cirefice/Downloads/commandes_1.html -->
+<html lang="fr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratoire - Commandes</title>
+    <link rel="stylesheet" href="file:///C:/Users/m.cirefice/assets/common.css">
+    <style>
+        .cmd-toolbar {
+            display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;
+            background: #f8f9fa; padding: 20px; border-radius: 15px; margin-bottom: 25px;
+        }
+        .cmd-toolbar .input-group { min-width: 220px; }
+        .cmd-toolbar select {
+            padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; width: 100%;
+        }
+        table.cmd-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
+        table.cmd-table th {
+            background: #667eea; color: white; padding: 12px 10px; font-size: 13px; text-align: left;
+        }
+        table.cmd-table td { padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
+        table.cmd-table tr:hover td { background: rgba(102,126,234,0.05); }
+        table.cmd-table input[type="number"] {
+            width: 70px; padding: 6px; border: 2px solid #e0e0e0; border-radius: 6px;
+        }
+        .cmd-summary {
+            position: sticky; bottom: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border-radius: 15px; padding: 16px 24px; margin-top: 20px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+        }
+        .cmd-summary .total { font-size: 22px; font-weight: 800; }
+        .btn-save-order {
+            background: white; color: #667eea; border: none; padding: 12px 24px; border-radius: 10px;
+            font-weight: 700; cursor: pointer; font-size: 15px;
+        }
+        .btn-save-order:disabled { opacity: 0.5; cursor: not-allowed; }
+        .cmd-empty { text-align: center; color: #999; padding: 30px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <div class="header-top">
+                <div class="header-left"><img src="file:///C:/Users/m.cirefice/logo-notre-dame.png" alt="Notre-Dame Les Oiseaux"></div>
+                <div class="header-center">
+                    <div><h1>🔬 Laboratoire</h1><p>Tableau de bord - Gestion d'équipe</p></div>
+                </div>
+                <div class="header-right"><img src="file:///C:/Users/m.cirefice/logo-ndo-sup.png" alt="NDO Sup"></div>
+            </div>
+            <div class="user-info">
+                <span class="user-badge" id="userBadge">Utilisateur</span>
+                <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
+            </div>
+        </div>
+
+        <div class="tabs-container">
+            <div class="tabs-nav" id="tabsNav"></div>
+
+            <div class="tab-content">
+                <div class="content-section active" id="sectionCommandes">
+                    <h2 style="color:#667eea;margin-bottom:20px;text-align:center;">📦 Commandes</h2>
+
+                    <div class="cmd-toolbar">
+                        <div class="input-group">
+                            <label>Site</label>
+                            <select id="siteSelect" onchange="onSiteChange()">
+                                <option value="">— Choisir un site —</option>
+                                <option value="tocqueville">Tocqueville</option>
+                                <option value="saintpierre">Saint-Pierre</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Fournisseur</label>
+                            <select id="fournisseurSelect" onchange="onFournisseurChange()" disabled="">
+                                <option value="">— Choisir un site d'abord —</option>
+                            </select>
+                        </div>
+                        <div class="input-group" style="flex:0 0 auto;">
+                            <button class="btn-refresh" onclick="onFournisseurChange()">🔄 Recharger</button>
+                        </div>
+                    </div>
+
+                    <div id="cmdLoading" class="loading-message" style="display:none;">
+                        <div class="spinner"></div><p>Chargement des produits...</p>
+                    </div>
+
+                    <div id="cmdEmpty" class="cmd-empty">Sélectionne un site puis un fournisseur pour afficher ses produits.</div>
+
+                    <div id="cmdTableWrap" style="display:none;overflow-x:auto;">
+                        <table class="cmd-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:36px;"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></th>
+                                    <th>Désignation</th>
+                                    <th>Référence</th>
+                                    <th>Prix unit. HT</th>
+                                    <th>Qté prévisionnelle</th>
+                                    <th>Qté à commander</th>
+                                    <th>Total HT</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cmdTableBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="cmd-summary" id="cmdSummary" style="display:none;">
+                        <div>
+                            <div id="cmdCount" style="font-size:14px;opacity:0.85;">0 item sélectionné</div>
+                            <div class="total" id="cmdTotal">0,00 € HT</div>
+                        </div>
+                        <button class="btn-save-order" id="btnSaveOrder" disabled="" onclick="saveOrder()">
+                            💾 Enregistrer la commande
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="file:///C:/Users/m.cirefice/assets/nav.config.js"></script>
+    <script src="file:///C:/Users/m.cirefice/assets/common.js"></script>
+    <script>
+        /* ── Configuration des sites (les IDs restent côté script, pas ici) ── */
+        const SITES = {
+            tocqueville: { label: 'Tocqueville' },
+            saintpierre: { label: 'Saint-Pierre' }
+        };
+
+        // ⚠️ À remplacer par l'URL /exec obtenue après déploiement de Code_Commandes.gs
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwbmrojjrUOPkUZlYElmAdOFtwvkz4Q2x8KGZ1BzznyMbij8frqtVhz8STIWzqefO7b-g/exec';
+
+        let currentFournisseurs = []; // liste des noms d'onglets fournisseurs pour le site sélectionné
+        let currentItems = [];        // items chargés pour le fournisseur sélectionné
+
+        window.addEventListener('load', function () {
+            initModulePage('commandes');
+        });
+
+        async function onSiteChange() {
+            const siteKey = document.getElementById('siteSelect').value;
+            const fSelect = document.getElementById('fournisseurSelect');
+            resetTable();
+            if (!siteKey) {
+                fSelect.disabled = true;
+                fSelect.innerHTML = '<option value="">— Choisir un site d\'abord —</option>';
+                return;
+            }
+            fSelect.disabled = true;
+            fSelect.innerHTML = '<option value="">Chargement des fournisseurs...</option>';
+            try {
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'listFournisseurs', { site: siteKey });
+                if (!res.success) throw new Error(res.error || 'Erreur script');
+                currentFournisseurs = res.data;
+                if (currentFournisseurs.length === 0) {
+                    fSelect.innerHTML = '<option value="">Aucun fournisseur trouvé</option>';
+                    return;
+                }
+                fSelect.innerHTML = '<option value="">— Choisir un fournisseur —</option>' +
+                    currentFournisseurs.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
+                fSelect.disabled = false;
+            } catch (err) {
+                console.error(err);
+                fSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+            }
+        }
+
+        async function onFournisseurChange() {
+            const siteKey = document.getElementById('siteSelect').value;
+            const fournisseur = document.getElementById('fournisseurSelect').value;
+            if (!siteKey || !fournisseur) { resetTable(); return; }
+
+            document.getElementById('cmdEmpty').style.display = 'none';
+            document.getElementById('cmdTableWrap').style.display = 'none';
+            document.getElementById('cmdSummary').style.display = 'none';
+            document.getElementById('cmdLoading').style.display = 'block';
+
+            try {
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'listProduits', { site: siteKey, fournisseur });
+                if (!res.success) throw new Error(res.error || 'Erreur script');
+                currentItems = res.data;
+                document.getElementById('cmdLoading').style.display = 'none';
+                if (currentItems.length === 0) {
+                    document.getElementById('cmdEmpty').textContent =
+                        `Aucun produit renseigné pour "${fournisseur}" pour l'instant.`;
+                    document.getElementById('cmdEmpty').style.display = 'block';
+                    return;
+                }
+                renderTable();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('cmdLoading').style.display = 'none';
+                document.getElementById('cmdEmpty').textContent = '❌ Erreur de chargement de cet onglet fournisseur.';
+                document.getElementById('cmdEmpty').style.display = 'block';
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('cmdTableBody');
+            tbody.innerHTML = currentItems.map((item, idx) => `
+                <tr data-idx="${idx}">
+                    <td><input type="checkbox" class="item-check" onchange="updateSummary()"></td>
+                    <td>${escapeHtml(item.designation)}${item.reference ? '' : ''}</td>
+                    <td>${escapeHtml(item.reference)}</td>
+                    <td>${item.prixUnitaire.toFixed(2)} €</td>
+                    <td>${item.quantitePrev}</td>
+                    <td><input type="number" class="item-qty" min="0" step="1" value="${item.quantitePrev}" onchange="updateSummary()"></td>
+                    <td class="item-total">${(item.prixUnitaire * item.quantitePrev).toFixed(2)} €</td>
+                </tr>
+            `).join('');
+            document.getElementById('cmdTableWrap').style.display = 'block';
+            document.getElementById('cmdSummary').style.display = 'flex';
+            document.getElementById('checkAll').checked = false;
+            updateSummary();
+        }
+
+        function toggleAll(checkbox) {
+            document.querySelectorAll('.item-check').forEach(c => c.checked = checkbox.checked);
+            updateSummary();
+        }
+
+        function updateSummary() {
+            let count = 0, total = 0;
+            document.querySelectorAll('#cmdTableBody tr').forEach(tr => {
+                const idx = parseInt(tr.dataset.idx, 10);
+                const checked = tr.querySelector('.item-check').checked;
+                const qty = parseFloat(tr.querySelector('.item-qty').value) || 0;
+                const lineTotal = checked ? currentItems[idx].prixUnitaire * qty : 0;
+                tr.querySelector('.item-total').textContent = (currentItems[idx].prixUnitaire * qty).toFixed(2) + ' €';
+                if (checked && qty > 0) { count++; total += lineTotal; }
+            });
+            document.getElementById('cmdCount').textContent = `${count} item${count > 1 ? 's' : ''} sélectionné${count > 1 ? 's' : ''}`;
+            document.getElementById('cmdTotal').textContent = total.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' € HT';
+            document.getElementById('btnSaveOrder').disabled = count === 0;
+        }
+
+        async function saveOrder() {
+            const siteKey = document.getElementById('siteSelect').value;
+            const fournisseur = document.getElementById('fournisseurSelect').value;
+            const items = [];
+            document.querySelectorAll('#cmdTableBody tr').forEach(tr => {
+                const idx = parseInt(tr.dataset.idx, 10);
+                const checked = tr.querySelector('.item-check').checked;
+                const qty = parseFloat(tr.querySelector('.item-qty').value) || 0;
+                if (checked && qty > 0) {
+                    const item = currentItems[idx];
+                    items.push({
+                        designation: item.designation, reference: item.reference,
+                        quantite: qty, prixUnitaire: item.prixUnitaire,
+                        typeDepense: item.typeDepense, codeAnalytique: item.codeAnalytique
+                    });
+                }
+            });
+            if (items.length === 0) return;
+
+            const btn = document.getElementById('btnSaveOrder');
+            btn.disabled = true;
+            btn.textContent = '⏳ Enregistrement...';
+            try {
+                const creePar = localStorage.getItem('loggedUser') || '';
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'saveOrder', {
+                    site: siteKey, fournisseur: fournisseur, creePar: creePar, items: items
+                });
+                if (!res.success) throw new Error(res.error || 'Erreur script');
+                alert(`✅ Commande ${res.data.orderId} enregistrée (${items.length} items, ${res.data.totalHT.toFixed(2)} € HT).`);
+                onFournisseurChange();
+            } catch (err) {
+                console.error(err);
+                alert('❌ Erreur lors de l\'enregistrement : ' + err.message);
+            } finally {
+                btn.textContent = '💾 Enregistrer la commande';
+            }
+        }
+
+        function resetTable() {
+            currentItems = [];
+            document.getElementById('cmdTableWrap').style.display = 'none';
+            document.getElementById('cmdSummary').style.display = 'none';
+            document.getElementById('cmdEmpty').textContent = 'Sélectionne un site puis un fournisseur pour afficher ses produits.';
+            document.getElementById('cmdEmpty').style.display = 'block';
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+    </script>
+
+
+</body></html>

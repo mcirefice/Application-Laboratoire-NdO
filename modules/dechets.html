@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratoire - Gestion des Déchets</title>
+    <link rel="stylesheet" href="../assets/common.css">
+    <style>
+        .btn-refresh-waste, .btn-edit-waste {
+            padding: 10px 20px; border: none; border-radius: 10px;
+            font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+        }
+        .btn-refresh-waste { background: #f8f9fa; color: #667eea; border: 2px solid #667eea; }
+        .btn-refresh-waste:hover { background: #667eea; color: white; transform: translateY(-2px); }
+        .btn-edit-waste { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-edit-waste:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); }
+
+        .waste-chart-card {
+            background: white; border-radius: 15px; padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease;
+        }
+        .waste-chart-card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15); }
+        .waste-chart-card.alert { border: 3px solid #ef4444; animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+            50% { box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4); }
+        }
+        .waste-header { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .waste-color-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #ddd; }
+        .waste-title { font-size: 16px; font-weight: bold; color: #333; flex: 1; }
+        .waste-value { font-size: 24px; font-weight: bold; color: #667eea; text-align: center; margin: 10px 0; }
+        .waste-bar-container {
+            position: relative; height: 200px; background: #f0f0f0;
+            border-radius: 10px; overflow: hidden; margin: 15px 0;
+        }
+        .waste-bar {
+            position: absolute; bottom: 0; width: 100%;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            transition: height 0.5s ease, background 0.3s ease; border-radius: 10px 10px 0 0;
+        }
+        .waste-bar.warning { background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%); }
+        .waste-bar.danger { background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%); }
+        .waste-threshold-line {
+            position: absolute; width: 100%; height: 3px; background: #ef4444;
+            left: 0; z-index: 10; box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+        .waste-threshold-label {
+            position: absolute; right: 5px; background: #ef4444; color: white;
+            padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; transform: translateY(-50%);
+        }
+        .waste-info { display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-top: 10px; }
+        .alert-banner {
+            background: linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);
+            border: 2px solid #f59e0b; border-radius: 15px; padding: 20px; margin-bottom: 20px;
+        }
+        .alert-banner.danger { background: linear-gradient(135deg, #fee2e2 0%, #fca5a5 100%); border-color: #ef4444; }
+        .alert-banner h3 { color: #92400e; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .alert-banner.danger h3 { color: #7f1d1d; }
+        .alert-list { list-style: none; padding: 0; margin: 10px 0 0 0; }
+        .alert-list li { padding: 8px 0; color: #92400e; font-weight: 600; }
+        .alert-banner.danger .alert-list li { color: #7f1d1d; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <div class="header-top">
+                <div class="header-left"><img src="../logo-notre-dame.png" alt="Notre-Dame Les Oiseaux"></div>
+                <div class="header-center">
+                    <div><h1>🔬 Laboratoire</h1><p>Tableau de bord - Gestion d'équipe</p></div>
+                </div>
+                <div class="header-right"><img src="../logo-ndo-sup.png" alt="NDO Sup"></div>
+            </div>
+            <div class="user-info">
+                <span class="user-badge" id="userBadge">Utilisateur</span>
+                <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
+            </div>
+        </div>
+
+        <div class="tabs-container">
+            <div class="tabs-nav" id="tabsNav"></div>
+
+            <div class="tab-content">
+                <div class="content-section active" id="sectionDechets">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
+                        <div>
+                            <h2 style="color: #667eea; margin: 0;">♻️ Gestion des Déchets Chimiques</h2>
+                            <p id="lastUpdateWaste" style="color: #999; font-size: 12px; margin: 5px 0 0 0;">
+                                🔄 Rafraîchissement automatique toutes les 30s
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn-refresh-waste" onclick="refreshWasteData()">🔄 Actualiser</button>
+                            <button class="btn-edit-waste" onclick="openWasteSheet()">✏️ Modifier les stocks</button>
+                        </div>
+                    </div>
+
+                    <p style="color: #666; margin-bottom: 30px; text-align: center;">
+                        Suivi en temps réel des déchets chimiques. Les bidons sont de 5L (PCL en boîtes).
+                    </p>
+
+                    <div id="loadingWaste" class="loading-message">
+                        <div class="spinner"></div>
+                        <p>Chargement des données...</p>
+                    </div>
+
+                    <div id="wasteConfigError" class="error-message-box" style="display: none;">
+                        <h4>⚙️ Configuration nécessaire</h4>
+                        <p>Le Google Sheet des déchets n'est pas encore configuré.</p>
+                    </div>
+
+                    <div id="wasteContainer" style="display: none;">
+
+                        <div id="wasteCostBlock" style="display:none; margin-bottom: 25px;">
+                            <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d6a4f 100%); border-radius: 15px; padding: 20px 30px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <span style="font-size: 32px;">💶</span>
+                                    <div>
+                                        <div style="color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Coût total d'enlèvement TTC</div>
+                                        <div style="color: white; font-size: 13px; margin-top: 2px; opacity: 0.6;">Cumulé sur l'année en cours</div>
+                                    </div>
+                                </div>
+                                <div id="wasteCostValue" style="color: #4ade80; font-size: 36px; font-weight: 800; letter-spacing: -1px;">—</div>
+                            </div>
+                        </div>
+
+                        <div id="wasteAlerts" style="margin-bottom: 30px;"></div>
+
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 30px; display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 20px; height: 20px; background: #667eea; border-radius: 4px;"></div>
+                                <span style="font-size: 14px; color: #333;">Stock actuel</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 20px; height: 3px; background: #ef4444; border-radius: 2px;"></div>
+                                <span style="font-size: 14px; color: #333;">Seuil d'alerte</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 20px; height: 20px; background: #fbbf24; border-radius: 4px;"></div>
+                                <span style="font-size: 14px; color: #333;">Alerte proche</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 20px; height: 20px; background: #ef4444; border-radius: 4px;"></div>
+                                <span style="font-size: 14px; color: #333;">Seuil atteint</span>
+                            </div>
+                        </div>
+
+                        <div id="wasteCharts" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../assets/nav.config.js"></script>
+    <script src="../assets/common.js"></script>
+    <script>
+        window.addEventListener('load', function () {
+            const user = initModulePage('dechets');
+            if (!user) return;
+            loadWasteData();
+            startWasteAutoRefresh();
+        });
+
+        const WASTE_SHEET_ID = '1avzZS66nXjCYw01re2kUevVuSZByHz9jrXrT8j7cNAY';
+        const WASTE_SHEET_NAME = 'Déchets';
+
+        const wasteTypes = {
+            'Jaune - Acides':                  { color: '#fbbf24', unit: 'bidons',  maxCapacity: 25 },
+            'Vert - Bases':                    { color: '#10b981', unit: 'bidons',  maxCapacity: 25 },
+            'Rouge - Solvant non halogéné':    { color: '#ef4444', unit: 'bidons',  maxCapacity: 10 },
+            'Rouge X - Solvant halogéné':      { color: '#dc2626', unit: 'bidons',  maxCapacity: 10 },
+            'PCL - Petit Contenant':           { color: '#8b5cf6', unit: 'boîtes',  maxCapacity: 100 },
+            'Bidons biologiques':              { color: '#f97316', unit: 'bidons',  maxCapacity: 12 },
+            'Solide Organique':                { color: '#84cc16', unit: 'boîtes',  maxCapacity: 6  },
+            'Filtre de Hotte':                 { color: '#64748b', unit: 'filtres', maxCapacity: 10 }
+        };
+
+        let wasteData = {};
+
+        function openWasteSheet() {
+            window.open(`https://docs.google.com/spreadsheets/d/${WASTE_SHEET_ID}/edit`, '_blank');
+        }
+
+        function refreshWasteData() {
+            document.getElementById('wasteContainer').style.display = 'none';
+            document.getElementById('loadingWaste').style.display = 'block';
+            loadWasteData();
+        }
+
+        async function loadWasteData() {
+            try {
+                const rows = await fetchSheetCSV(WASTE_SHEET_ID, WASTE_SHEET_NAME);
+                wasteData = parseWasteRows(rows);
+                document.getElementById('loadingWaste').style.display = 'none';
+                document.getElementById('wasteContainer').style.display = 'block';
+                displayWasteCharts();
+                loadWasteCost();
+            } catch (error) {
+                console.error('Erreur de chargement:', error);
+                document.getElementById('loadingWaste').innerHTML = `
+                    <p style="color:#c33;">❌ Erreur de chargement des données</p>
+                    <p style="font-size:14px;">Erreur: ${error.message}</p>
+                    <button onclick="loadWasteData()" style="margin-top:10px;padding:10px 20px;background:#667eea;color:white;border:none;border-radius:5px;cursor:pointer;">Réessayer</button>
+                `;
+            }
+        }
+
+        // rows[0] = en-têtes ; on ignore la 1ère ligne, comme la V1
+        function parseWasteRows(rows) {
+            const data = {};
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0) continue;
+                const filiere = (row[0] || '').trim();
+                if (!filiere) continue;
+                const quantite = parseInt(row[1]) || 0;
+                const seuil = parseInt(row[2]) || 0;
+                const pictogrammes = row[3] ? row[3].toLowerCase().split(' ').filter(p => p) : [];
+                data[filiere] = { current: quantite, threshold: seuil, pictograms: pictogrammes };
+            }
+            return data;
+        }
+
+        async function loadWasteCost() {
+            try {
+                const rawCost = await fetchSheetCell(WASTE_SHEET_ID, WASTE_SHEET_NAME, 'G15');
+                if (rawCost) {
+                    const num = parseFloat(rawCost.replace(/\s/g, '').replace(',', '.').replace(/[^\d.]/g, ''));
+                    const formatted = isNaN(num)
+                        ? rawCost
+                        : num.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+                    document.getElementById('wasteCostValue').textContent = formatted;
+                    document.getElementById('wasteCostBlock').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Erreur chargement coût:', error);
+                document.getElementById('wasteCostBlock').style.display = 'none';
+            }
+        }
+
+        function displayWasteCharts() {
+            const container = document.getElementById('wasteCharts');
+            const alertsContainer = document.getElementById('wasteAlerts');
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            const lastUpdateEl = document.getElementById('lastUpdateWaste');
+            if (lastUpdateEl) lastUpdateEl.innerHTML = `🔄 Rafraîchissement auto toutes les 30s | Dernière mise à jour : ${timeStr}`;
+
+            let html = '';
+            let dangerAlerts = [];
+            let warningAlerts = [];
+
+            Object.keys(wasteTypes).forEach(type => {
+                const config = wasteTypes[type];
+                const data = wasteData[type] || { current: 0, threshold: 0, pictograms: [] };
+                const current = data.current;
+                const threshold = data.threshold;
+                const pictograms = data.pictograms || [];
+                const maxCapacity = config.maxCapacity;
+                let pictogramsHTML = '';
+                pictograms.forEach(code => { pictogramsHTML += displayPictogram(code, 40); });
+                const percentage = (current / maxCapacity) * 100;
+                const thresholdPercentage = (threshold / maxCapacity) * 100;
+                let barClass = '', cardClass = '';
+                if (current >= threshold) { barClass = 'danger'; cardClass = 'alert'; dangerAlerts.push(type); }
+                else if (current >= threshold * 0.8) { barClass = 'warning'; warningAlerts.push(type); }
+                html += `
+                    <div class="waste-chart-card ${cardClass}">
+                        <div class="waste-header">
+                            <div class="waste-color-dot" style="background-color:${config.color};"></div>
+                            <div class="waste-title">${type}</div>
+                            <div style="margin-left:auto;display:flex;gap:5px;align-items:center;">${pictogramsHTML}</div>
+                        </div>
+                        <div class="waste-value">${current} ${config.unit}</div>
+                        <div class="waste-bar-container">
+                            <div class="waste-threshold-line" style="bottom:${thresholdPercentage}%;">
+                                <span class="waste-threshold-label">Seuil: ${threshold}</span>
+                            </div>
+                            <div class="waste-bar ${barClass}" style="height:${percentage}%;"></div>
+                        </div>
+                        <div class="waste-info">
+                            <span>Actuel: ${current}</span>
+                            <span>Seuil: ${threshold}</span>
+                            <span>Max: ${maxCapacity}</span>
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = html;
+
+            let alertsHtml = '';
+            if (dangerAlerts.length > 0) {
+                alertsHtml += `
+                    <div class="alert-banner danger">
+                        <h3>🚨 ALERTE - Retrait nécessaire</h3>
+                        <p style="color:#7f1d1d;margin:10px 0;">Les filières suivantes ont atteint le seuil de retrait :</p>
+                        <ul class="alert-list">${dangerAlerts.map(t => `<li>• ${t}</li>`).join('')}</ul>
+                        <p style="color:#7f1d1d;margin-top:15px;font-weight:bold;">⚠️ Contacter la société de collecte des déchets</p>
+                    </div>`;
+            }
+            if (warningAlerts.length > 0) {
+                alertsHtml += `
+                    <div class="alert-banner">
+                        <h3>⚠️ Attention - Seuil proche</h3>
+                        <p style="color:#92400e;margin:10px 0;">Les filières suivantes approchent du seuil :</p>
+                        <ul class="alert-list">${warningAlerts.map(t => `<li>• ${t}</li>`).join('')}</ul>
+                    </div>`;
+            }
+            if (dangerAlerts.length === 0 && warningAlerts.length === 0) {
+                alertsHtml = `
+                    <div style="background:#d1fae5;border:2px solid #10b981;border-radius:15px;padding:20px;text-align:center;">
+                        <h3 style="color:#065f46;margin-bottom:10px;">✅ Situation normale</h3>
+                        <p style="color:#065f46;">Tous les stocks de déchets sont sous les seuils d'alerte.</p>
+                    </div>`;
+            }
+            alertsContainer.innerHTML = alertsHtml;
+        }
+
+        let wasteRefreshInterval = null;
+
+        function startWasteAutoRefresh() {
+            if (wasteRefreshInterval) clearInterval(wasteRefreshInterval);
+            wasteRefreshInterval = setInterval(() => { loadWasteData(); }, 30000);
+        }
+
+        function stopWasteAutoRefresh() {
+            if (wasteRefreshInterval) { clearInterval(wasteRefreshInterval); wasteRefreshInterval = null; }
+        }
+    </script>
+</body>
+</html>

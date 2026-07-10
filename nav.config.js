@@ -10,7 +10,7 @@
    ============================================================ */
 
 const NAV_MODULES = [
-    { id: 'dechets',       label: '♻️ Gestion des Déchets',           file: 'dashboard.html' },
+    { id: 'dechets',       label: '♻️ Gestion des Déchets',           file: 'dechets.html' },
     { id: 'tp',            label: '🧪 Préparation TP',                file: 'dashboard.html' },
     { id: 'preparations',  label: '📚 Préparations Particulières',    file: 'dashboard.html' },
     { id: 'optique',       label: '🔭 Conversions Optiques',          file: 'optique.html' },

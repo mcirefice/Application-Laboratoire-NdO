@@ -91,7 +91,7 @@ function parseCSVRows(csv) {
 /* ── Pictogrammes (règle critique : toujours .toLowerCase(), fichiers PNG en minuscules) ── */
 function displayPictogram(code, size = 40) {
     const safeCode = String(code).toLowerCase().trim();
-    return `<img src="${safeCode}.png" alt="${safeCode}" style="width:${size}px;height:${size}px;display:inline-block;vertical-align:middle;" onerror="this.style.display='none'">`;
+    return `<img src="../${safeCode}.png" alt="${safeCode}" style="width:${size}px;height:${size}px;display:inline-block;vertical-align:middle;" onerror="this.style.display='none'">`;
 }
 
 /* ── Appel à un Apps Script Web App (pattern Code_Maintenance.gs) ──

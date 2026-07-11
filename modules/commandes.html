@@ -60,6 +60,15 @@
                 <div class="content-section active" id="sectionCommandes">
                     <h2 style="color:#667eea;margin-bottom:20px;text-align:center;">📦 Commandes</h2>
 
+                    <div style="display:flex;gap:12px;justify-content:center;margin-bottom:20px;flex-wrap:wrap;">
+                        <button id="btnAnnee2025" class="type-btn active" onclick="selectAnnee('2025-2026')" style="min-width:200px;">
+                            📗 Commandes 2025-2026
+                        </button>
+                        <button id="btnAnnee2026" class="type-btn" onclick="selectAnnee('2026-2027')" style="min-width:200px;">
+                            📘 Commandes 2026-2027
+                        </button>
+                    </div>
+
                     <div class="cmd-toolbar">
                         <div class="input-group">
                             <label>Site</label>
@@ -77,6 +86,9 @@
                         </div>
                         <div class="input-group" style="flex:0 0 auto;">
                             <button class="btn-refresh" onclick="onFournisseurChange()">🔄 Recharger</button>
+                        </div>
+                        <div class="input-group" style="flex:0 0 auto;">
+                            <button class="btn-refresh" onclick="window.open('https://drive.google.com/drive/my-drive', '_blank')">📁 Ouvrir le Drive</button>
                         </div>
                     </div>
 
@@ -129,12 +141,25 @@
         // ⚠️ À remplacer par l'URL /exec obtenue après déploiement de Code_Commandes.gs
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwbmrojjrUOPkUZlYElmAdOFtwvkz4Q2x8KGZ1BzznyMbij8frqtVhz8STIWzqefO7b-g/exec';
 
+        let selectedAnnee = '2025-2026'; // année active par défaut au chargement
         let currentFournisseurs = []; // liste des noms d'onglets fournisseurs pour le site sélectionné
         let currentItems = [];        // items chargés pour le fournisseur sélectionné
 
         window.addEventListener('load', function () {
             initModulePage('commandes');
         });
+
+        function selectAnnee(annee) {
+            selectedAnnee = annee;
+            document.getElementById('btnAnnee2025').classList.toggle('active', annee === '2025-2026');
+            document.getElementById('btnAnnee2026').classList.toggle('active', annee === '2026-2027');
+            // On repart de zéro sur le site/fournisseur en changeant d'année,
+            // pour éviter de mélanger des données de deux années différentes.
+            document.getElementById('siteSelect').value = '';
+            document.getElementById('fournisseurSelect').disabled = true;
+            document.getElementById('fournisseurSelect').innerHTML = '<option value="">— Choisir un site d\'abord —</option>';
+            resetTable();
+        }
 
         async function onSiteChange() {
             const siteKey = document.getElementById('siteSelect').value;
@@ -148,7 +173,7 @@
             fSelect.disabled = true;
             fSelect.innerHTML = '<option value="">Chargement des fournisseurs...</option>';
             try {
-                const res = await callAppsScript(APPS_SCRIPT_URL, 'listFournisseurs', { site: siteKey });
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'listFournisseurs', { anneeLong: selectedAnnee, site: siteKey });
                 if (!res.success) throw new Error(res.error || 'Erreur script');
                 currentFournisseurs = res.data;
                 if (currentFournisseurs.length === 0) {
@@ -175,7 +200,7 @@
             document.getElementById('cmdLoading').style.display = 'block';
 
             try {
-                const res = await callAppsScript(APPS_SCRIPT_URL, 'listProduits', { site: siteKey, fournisseur });
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'listProduits', { anneeLong: selectedAnnee, site: siteKey, fournisseur });
                 if (!res.success) throw new Error(res.error || 'Erreur script');
                 currentItems = res.data;
                 document.getElementById('cmdLoading').style.display = 'none';
@@ -258,7 +283,7 @@
             try {
                 const creePar = localStorage.getItem('loggedUser') || '';
                 const res = await callAppsScript(APPS_SCRIPT_URL, 'saveOrder', {
-                    site: siteKey, fournisseur: fournisseur, creePar: creePar, items: items
+                    anneeLong: selectedAnnee, site: siteKey, fournisseur: fournisseur, creePar: creePar, items: items
                 });
                 if (!res.success) throw new Error(res.error || 'Erreur script');
                 const docLine = res.data.docUrl ? `\n📄 Document généré : ${res.data.docUrl}` : '\n⚠️ Document non généré (voir avec l\'administrateur).';

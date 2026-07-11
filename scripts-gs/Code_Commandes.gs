@@ -19,15 +19,24 @@
  *     (variable APPS_SCRIPT_URL)
  *
  * ACTIONS EXPOSÉES (POST, body JSON) :
- *  - { action: "listFournisseurs", site: "tocqueville" | "saintpierre" }
- *  - { action: "listProduits", site: "...", fournisseur: "Nom exact onglet" }
+ *  - { action: "listFournisseurs", anneeLong: "2026-2027", site: "tocqueville" | "saintpierre" }
+ *  - { action: "listProduits", anneeLong: "...", site: "...", fournisseur: "Nom exact onglet" }
+ *  - { action: "saveOrder", anneeLong: "...", site: "...", fournisseur, creePar, items: [...] }
  * ------------------------------------------------------------
  */
 
-// ID des deux classeurs — à ne modifier que si les fichiers sont renommés/déplacés.
+// ID des classeurs Commandes, un jeu par année scolaire (chaque Sheet
+// est propre à une année). Ajouter une nouvelle année = ajouter une
+// ligne ici, sans toucher au reste du script.
 const SITE_SHEETS = {
-  tocqueville: '1oF4EZmSLzLrZARt_CKuVmYcEsvgBaZCg11UDDbTkUoQ',
-  saintpierre: '1OhgQoeoMAIx3LEnVwlLFPOWqJKt96vtNNCF-vED8wng'
+  '2025-2026': {
+    tocqueville: 'ID_SHEET_TOCQUEVILLE_2025_2026_A_COMPLETER',
+    saintpierre: 'ID_SHEET_SAINTPIERRE_2025_2026_A_COMPLETER'
+  },
+  '2026-2027': {
+    tocqueville: '1oF4EZmSLzLrZARt_CKuVmYcEsvgBaZCg11UDDbTkUoQ',
+    saintpierre: '1OhgQoeoMAIx3LEnVwlLFPOWqJKt96vtNNCF-vED8wng'
+  }
 };
 
 // ID du registre de suivi des commandes — laisser vide, puis lancer
@@ -47,9 +56,9 @@ function initRegistre() {
 
   const cmdSheet = ss.getSheets()[0];
   cmdSheet.setName('Commandes');
-  cmdSheet.getRange(1, 1, 1, 11).setValues([[
+  cmdSheet.getRange(1, 1, 1, 12).setValues([[
     'ID commande', 'Date création', 'Site', 'Fournisseur', 'Créé par',
-    'Nb items', 'Total HT', 'Total TTC', 'Statut', 'Date dernière MAJ', 'Lien Doc généré'
+    'Nb items', 'Total HT', 'Total TTC', 'Statut', 'Date dernière MAJ', 'Lien Doc généré', 'Année scolaire'
   ]]);
   cmdSheet.setFrozenRows(1);
 
@@ -71,12 +80,50 @@ function getRegistreSheet(sheetName) {
   return ss.getSheetByName(sheetName);
 }
 
+// Code court par site, utilisé dans l'ID de commande et le nom du sous-dossier Drive.
+const SITE_CODES = {
+  tocqueville: { code: 'TQ', dossier: 'Tocqueville' },
+  saintpierre: { code: 'SP', dossier: 'Saint-Pierre' }
+};
+
+/**
+ * Convertit une année scolaire "longue" ("2026-2027") en format
+ * "court" ("2627") utilisé dans l'ID de commande.
+ */
+function anneeLongVersCourt(anneeLong) {
+  const parts = String(anneeLong).split('-');
+  if (parts.length !== 2) throw new Error('Format d\'année scolaire invalide : ' + anneeLong);
+  return parts[0].slice(-2) + parts[1].slice(-2);
+}
+
+/**
+ * Calcule le prochain numéro de séquence (01, 02...) pour un site et une
+ * année scolaire donnés, en cherchant le plus grand numéro déjà utilisé
+ * dans les ID existants du registre — évite les doublons même après
+ * suppression manuelle d'une ligne.
+ */
+function nextOrderSequence(siteCode, anneeCourt) {
+  const cmdSheet = getRegistreSheet('Commandes');
+  const values = cmdSheet.getDataRange().getValues();
+  const regex = new RegExp('^CMD-' + siteCode + '-.*-' + anneeCourt + '-(\\d+)$');
+  let maxSeq = 0;
+  for (let i = 1; i < values.length; i++) {
+    const id = String(values[i][0] || '');
+    const match = id.match(regex);
+    if (match) maxSeq = Math.max(maxSeq, parseInt(match[1], 10));
+  }
+  return maxSeq + 1;
+}
+
 /**
  * Enregistre une nouvelle commande : une ligne dans "Commandes" +
  * une ligne par item dans "Détail". Statut initial : "À commander".
- * Génère aussi automatiquement un Google Doc récapitulatif, nommé
- * "{orderId} - {fournisseur}", et enregistre son lien dans le registre.
- * payload attendu : { site, fournisseur, creePar, items: [
+ * ID au format CMD-{SP|TQ}-{fournisseur}-{anneeCourte}-{séquence sur 2 chiffres}
+ * (ex : CMD-SP-AROMA-zone-2627-01).
+ * Génère aussi automatiquement un Google Doc récapitulatif, archivé dans
+ * Commandes_Documents_Labo / {année} / {site} /, et enregistre son lien
+ * dans le registre.
+ * payload attendu : { anneeLong, site, fournisseur, creePar, items: [
  *   { designation, reference, quantite, prixUnitaire, typeDepense, codeAnalytique }
  * ]}
  */
@@ -84,7 +131,15 @@ function saveOrder(payload) {
   const items = payload.items || [];
   if (items.length === 0) throw new Error('Aucun item sélectionné.');
 
-  const orderId = 'CMD-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmmss');
+  const siteInfo = SITE_CODES[payload.site];
+  if (!siteInfo) throw new Error('Site inconnu : ' + payload.site);
+  if (!payload.anneeLong) throw new Error('Année scolaire manquante.');
+
+  const anneeLong = payload.anneeLong;
+  const anneeCourt = anneeLongVersCourt(anneeLong);
+  const seq = nextOrderSequence(siteInfo.code, anneeCourt);
+  const seqStr = String(seq).padStart(2, '0');
+  const orderId = 'CMD-' + siteInfo.code + '-' + payload.fournisseur + '-' + anneeCourt + '-' + seqStr;
   const now = new Date();
 
   let totalHT = 0;
@@ -94,7 +149,7 @@ function saveOrder(payload) {
   const cmdSheet = getRegistreSheet('Commandes');
   cmdSheet.appendRow([
     orderId, now, payload.site, payload.fournisseur, payload.creePar || '',
-    items.length, totalHT, totalTTC, 'À commander', now, ''
+    items.length, totalHT, totalTTC, 'À commander', now, '', anneeLong
   ]);
   const newRow = cmdSheet.getLastRow();
 
@@ -111,7 +166,7 @@ function saveOrder(payload) {
   // de la commande si elle échoue (la commande reste sauvegardée quoi qu'il arrive).
   let docUrl = '';
   try {
-    docUrl = generateOrderDoc(orderId, payload, items, totalHT, totalTTC, now);
+    docUrl = generateOrderDoc(orderId, payload, items, totalHT, totalTTC, now, siteInfo, anneeLong);
     cmdSheet.getRange(newRow, 11).setValue(docUrl); // colonne K = "Lien Doc généré"
   } catch (docErr) {
     Logger.log('Erreur génération du document pour ' + orderId + ' : ' + docErr.message);
@@ -121,14 +176,38 @@ function saveOrder(payload) {
 }
 
 /**
- * Récupère (ou crée si absent) le dossier Drive dédié aux documents
- * de commandes générés, pour ne pas les laisser à la racine du Drive.
+ * Dossiers Drive "Documents_Commandes" réels, un par site et par année
+ * scolaire (créés par toi ou par createNewSchoolYear()). À compléter
+ * au fil des années — voir la clé DOCS_FOLDERS.
  */
-function getOrCreateDocsFolder() {
-  const FOLDER_NAME = 'Commandes_Documents_Labo';
-  const folders = DriveApp.getFoldersByName(FOLDER_NAME);
-  if (folders.hasNext()) return folders.next();
-  return DriveApp.createFolder(FOLDER_NAME);
+const DOCS_FOLDERS = {
+  '2026-2027': {
+    saintpierre: '1fWe1gGdAeVRGLD0_O5uk2bbWWrL4orsY',
+    tocqueville: '11IXuVLtdYMx8k0JEEckDeRdVBBpMM70u'
+  }
+  // '2025-2026': à ajouter une fois le dossier Documents_Commandes créé pour cette année
+};
+
+/**
+ * Récupère le dossier Drive dédié aux documents générés pour un site et
+ * une année donnés. Si l'année/site n'est pas encore répertorié dans
+ * DOCS_FOLDERS (ex: années pas encore préparées), crée un dossier de
+ * secours pour ne jamais bloquer la génération d'un document.
+ */
+function getOrCreateDocsFolder(siteInfo, anneeLong, siteKey) {
+  const yearConfig = DOCS_FOLDERS[anneeLong];
+  if (yearConfig && yearConfig[siteKey]) {
+    return DriveApp.getFolderById(yearConfig[siteKey]);
+  }
+  // Repli : dossier auto-créé, pour ne pas bloquer si l'arborescence
+  // officielle n'existe pas encore pour cette année/site.
+  const PARENT_NAME = 'Commandes_Documents_Labo (non classé)';
+  const parentFolders = DriveApp.getFoldersByName(PARENT_NAME);
+  const parent = parentFolders.hasNext() ? parentFolders.next() : DriveApp.createFolder(PARENT_NAME);
+  const yearFolders = parent.getFoldersByName(anneeLong);
+  const yearFolder = yearFolders.hasNext() ? yearFolders.next() : parent.createFolder(anneeLong);
+  const siteFolders = yearFolder.getFoldersByName(siteInfo.dossier);
+  return siteFolders.hasNext() ? siteFolders.next() : yearFolder.createFolder(siteInfo.dossier);
 }
 
 /**
@@ -136,8 +215,8 @@ function getOrCreateDocsFolder() {
  * "{orderId} - {fournisseur}". Version simple sans charte graphique —
  * à personnaliser dès qu'un modèle officiel est défini.
  */
-function generateOrderDoc(orderId, payload, items, totalHT, totalTTC, dateCreation) {
-  const folder = getOrCreateDocsFolder();
+function generateOrderDoc(orderId, payload, items, totalHT, totalTTC, dateCreation, siteInfo, anneeLong) {
+  const folder = getOrCreateDocsFolder(siteInfo, anneeLong, payload.site);
   const docName = orderId + ' - ' + payload.fournisseur;
   const doc = DocumentApp.create(docName);
   const body = doc.getBody();
@@ -146,7 +225,7 @@ function generateOrderDoc(orderId, payload, items, totalHT, totalTTC, dateCreati
   body.appendParagraph(payload.fournisseur).setHeading(DocumentApp.ParagraphHeading.HEADING2);
 
   const dateStr = Utilities.formatDate(dateCreation, Session.getScriptTimeZone(), 'dd/MM/yyyy à HH:mm');
-  body.appendParagraph('Site : ' + payload.site);
+  body.appendParagraph('Site : ' + siteInfo.dossier);
   body.appendParagraph('N° commande : ' + orderId);
   body.appendParagraph('Date : ' + dateStr);
   body.appendParagraph('Créé par : ' + (payload.creePar || '—'));
@@ -177,6 +256,68 @@ function generateOrderDoc(orderId, payload, items, totalHT, totalTTC, dateCreati
   return file.getUrl();
 }
 
+// IDs à compléter une fois ta réorganisation Drive terminée :
+// - MODELES : les 2 fichiers Commandes_..._VIERGE, une fois déplacés dans Modèles/
+// - SITE_ROOT_FOLDERS : les dossiers Saint-Pierre/ et Tocqueville/ eux-mêmes (pas leurs sous-dossiers année)
+const MODELES = {
+  saintpierre: '1iCZx0X7NiPvzo9wfjuFeHSYiIXAuhZkBjQ8Qc9R-P2U',
+  tocqueville: '1MgNpi4bXxcXKXzX08JHugKrpOUvdmhfurDTZNDxnnCE'
+};
+const SITE_ROOT_FOLDERS = {
+  saintpierre: '1dMLPm-mqfGHyZenMBCMhM2MrG2M6Y3qm',
+  tocqueville: '15dFrMNvrB3CkVoR8b1C2Ee_OBmY9KfFc'
+};
+
+/**
+ * Prépare une nouvelle année scolaire pour les deux sites en une fois :
+ * - crée le dossier {anneeLong}/ sous chaque site, avec Devis/ et Documents_Commandes/
+ * - duplique le modèle vierge de chaque site, renommé "Commandes_{Site}_{anneeLong}"
+ * - met à jour la case "Année scolaire" dans l'onglet Paramétrage du nouveau Sheet
+ * Ne touche jamais aux données existantes des années précédentes.
+ * Renvoie les nouveaux ID de Sheets — à coller manuellement dans SITE_SHEETS
+ * ci-dessus (étape volontairement manuelle, pour valider avant mise en prod).
+ */
+function createNewSchoolYear(anneeLong) {
+  const results = {};
+  Object.keys(SITE_CODES).forEach(siteKey => {
+    const siteInfo = SITE_CODES[siteKey];
+    const modeleId = MODELES[siteKey];
+    const rootFolderId = SITE_ROOT_FOLDERS[siteKey];
+    const rootFolder = DriveApp.getFolderById(rootFolderId);
+
+    const yearFolders = rootFolder.getFoldersByName(anneeLong);
+    const yearFolder = yearFolders.hasNext() ? yearFolders.next() : rootFolder.createFolder(anneeLong);
+
+    if (!yearFolder.getFoldersByName('Devis').hasNext()) yearFolder.createFolder('Devis');
+    const docsFolders = yearFolder.getFoldersByName('Documents_Commandes');
+    const docsFolder = docsFolders.hasNext() ? docsFolders.next() : yearFolder.createFolder('Documents_Commandes');
+
+    const modeleFile = DriveApp.getFileById(modeleId);
+    const newName = 'Commandes_' + siteInfo.dossier + '_' + anneeLong;
+    const copy = modeleFile.makeCopy(newName, yearFolder);
+
+    // Met à jour la case "Année scolaire" dans le nouveau Sheet pour éviter
+    // qu'il garde l'année du modèle vierge par erreur.
+    const ss = SpreadsheetApp.openById(copy.getId());
+    const paramSheet = ss.getSheetByName('Paramétrage');
+    if (paramSheet) {
+      const values = paramSheet.getDataRange().getValues();
+      for (let i = 0; i < values.length; i++) {
+        if (String(values[i][0]).trim() === 'Année scolaire') {
+          paramSheet.getRange(i + 1, 2).setValue(anneeLong);
+          break;
+        }
+      }
+    }
+
+    results[siteKey] = {
+      sheetId: copy.getId(), sheetUrl: copy.getUrl(),
+      yearFolderId: yearFolder.getId(), docsFolderId: docsFolder.getId()
+    };
+  });
+  return results;
+}
+
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
@@ -185,13 +326,19 @@ function doPost(e) {
     let result;
     switch (action) {
       case 'listFournisseurs':
-        result = listFournisseurs(body.site);
+        result = listFournisseurs(body.anneeLong, body.site);
         break;
       case 'listProduits':
-        result = listProduits(body.site, body.fournisseur);
+        result = listProduits(body.anneeLong, body.site, body.fournisseur);
         break;
       case 'saveOrder':
         result = saveOrder(body);
+        break;
+      case 'createNewSchoolYear':
+        if (body.creePar !== 'm.cirefice') {
+          return jsonResponse({ success: false, error: 'Action réservée au DDFPT.' });
+        }
+        result = createNewSchoolYear(body.anneeLong);
         break;
       default:
         return jsonResponse({ success: false, error: 'Action inconnue : ' + action });
@@ -203,9 +350,11 @@ function doPost(e) {
   }
 }
 
-/* ── Ouvre le bon classeur selon le site, avec vérification ── */
-function openSiteSheet(siteKey) {
-  const sheetId = SITE_SHEETS[siteKey];
+/* ── Ouvre le bon classeur selon l'année scolaire ET le site ── */
+function openSiteSheet(anneeLong, siteKey) {
+  const anneeConfig = SITE_SHEETS[anneeLong];
+  if (!anneeConfig) throw new Error('Année scolaire inconnue ou non configurée : ' + anneeLong);
+  const sheetId = anneeConfig[siteKey];
   if (!sheetId) throw new Error('Site inconnu : ' + siteKey);
   return SpreadsheetApp.openById(sheetId);
 }
@@ -214,8 +363,8 @@ function openSiteSheet(siteKey) {
    Repère la ligne "LISTE DES FOURNISSEURS" puis lit les lignes
    suivantes (format "N°, Nom fournisseur") jusqu'à une ligne vide
    ou "← Ajouter des fournisseurs ici". */
-function listFournisseurs(siteKey) {
-  const ss = openSiteSheet(siteKey);
+function listFournisseurs(anneeLong, siteKey) {
+  const ss = openSiteSheet(anneeLong, siteKey);
   const sheet = ss.getSheetByName('Paramétrage');
   if (!sheet) throw new Error('Onglet "Paramétrage" introuvable');
 
@@ -244,8 +393,8 @@ function listFournisseurs(siteKey) {
    Référence, Prix unitaire, Saisie en, TVA, Prix HT, Prix TTC,
    Quantité, Total HT, Total TTC, Code analytique, Type de dépense.
    On ignore les lignes vides, légendes "(...)" et lignes de total. */
-function listProduits(siteKey, fournisseur) {
-  const ss = openSiteSheet(siteKey);
+function listProduits(anneeLong, siteKey, fournisseur) {
+  const ss = openSiteSheet(anneeLong, siteKey);
   let sheet = ss.getSheetByName(fournisseur);
 
   // Les onglets réels sont préfixés d'un numéro ("1-Abonnements divers")

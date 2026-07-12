@@ -16,6 +16,7 @@ const NAV_MODULES = [
     { id: 'optique',       label: '🔭 Conversions Optiques',          file: 'optique.html' },
     { id: 'maintenance',   label: '🛠️ Maintenance',                  file: 'maintenance.html' },
     { id: 'commandes',     label: '📦 Commandes',                     file: 'commandes.html' },
+    { id: 'suivi',         label: '📋 Suivi Commandes',               file: 'suivi.html' },
     { id: 'budget',        label: '📊 Budget & Suivi',                file: 'budget.html' }
 ];
 

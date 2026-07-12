@@ -34,7 +34,7 @@ const SITE_SHEETS = {
     saintpierre: 'ID_SHEET_SAINTPIERRE_2025_2026_A_COMPLETER'
   },
   '2026-2027': {
-    tocqueville: '1oF4EZmSLzLrZARt_CKuVmYcEsvgBaZCg11UDDbTkUoQ',
+    tocqueville: '1m_Z2vFtU2sFAMCSfvy_DKKPlF3x37ReF1IMMGulcbwY',
     saintpierre: '1OhgQoeoMAIx3LEnVwlLFPOWqJKt96vtNNCF-vED8wng'
   }
 };

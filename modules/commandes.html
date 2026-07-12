@@ -92,6 +92,8 @@
                         </div>
                     </div>
 
+                    <div id="draftsZone" style="margin-bottom:20px;"></div>
+
                     <div id="cmdLoading" class="loading-message" style="display:none;">
                         <div class="spinner"></div><p>Chargement des produits...</p>
                     </div>
@@ -119,10 +121,16 @@
                         <div>
                             <div id="cmdCount" style="font-size:14px;opacity:0.85;">0 item sélectionné</div>
                             <div class="total" id="cmdTotal">0,00 € HT</div>
+                            <div id="draftIndicator" style="font-size:12px;opacity:0.75;margin-top:4px;"></div>
                         </div>
-                        <button class="btn-save-order" id="btnSaveOrder" disabled onclick="saveOrder()">
-                            💾 Enregistrer la commande
-                        </button>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <button class="btn-save-order" id="btnSaveDraft" onclick="saveDraft()" style="background:rgba(255,255,255,0.15);color:white;">
+                                📝 Enregistrer en brouillon
+                            </button>
+                            <button class="btn-save-order" id="btnSaveOrder" disabled onclick="saveOrder()">
+                                💾 Valider la commande
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -144,9 +152,12 @@
         let selectedAnnee = '2025-2026'; // année active par défaut au chargement
         let currentFournisseurs = []; // liste des noms d'onglets fournisseurs pour le site sélectionné
         let currentItems = [];        // items chargés pour le fournisseur sélectionné
+        let currentDraftId = null;    // brouillon en cours d'édition (null si nouvelle commande)
 
         window.addEventListener('load', function () {
-            initModulePage('commandes');
+            const user = initModulePage('commandes');
+            if (!user) return;
+            loadDrafts();
         });
 
         function selectAnnee(annee) {
@@ -158,7 +169,87 @@
             document.getElementById('siteSelect').value = '';
             document.getElementById('fournisseurSelect').disabled = true;
             document.getElementById('fournisseurSelect').innerHTML = '<option value="">— Choisir un site d\'abord —</option>';
+            currentDraftId = null;
             resetTable();
+            loadDrafts();
+        }
+
+        async function loadDrafts() {
+            const zone = document.getElementById('draftsZone');
+            try {
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'listDrafts', { anneeLong: selectedAnnee });
+                if (!res.success) throw new Error(res.error || 'Erreur script');
+                const drafts = res.data;
+                if (drafts.length === 0) { zone.innerHTML = ''; return; }
+                zone.innerHTML = `
+                    <div style="background:#fffbeb;border:2px solid #fbbf24;border-radius:12px;padding:14px 18px;">
+                        <div style="font-weight:700;color:#92400e;margin-bottom:8px;">📝 Brouillons en attente (${drafts.length})</div>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            ${drafts.map(d => `
+                                <button class="category-btn" onclick="loadDraft('${d.draftId}')" style="font-size:13px;">
+                                    ${d.fournisseur} — ${d.site === 'tocqueville' ? 'Tocqueville' : 'Saint-Pierre'} (${d.nbItems} item${d.nbItems > 1 ? 's' : ''})
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>`;
+            } catch (err) {
+                console.error(err);
+                zone.innerHTML = '';
+            }
+        }
+
+        async function loadDraft(draftId) {
+            try {
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'getDraft', { draftId });
+                if (!res.success) throw new Error(res.error || 'Erreur script');
+                const draft = res.data;
+                currentDraftId = draft.draftId;
+
+                document.getElementById('siteSelect').value = draft.site;
+                await onSiteChange();
+                document.getElementById('fournisseurSelect').value = draft.fournisseur;
+                await onFournisseurChange();
+
+                // Recoche les items sauvegardés et restaure les quantités
+                draft.items.forEach(savedItem => {
+                    const idx = currentItems.findIndex(it => it.designation === savedItem.designation && it.reference === savedItem.reference);
+                    if (idx === -1) return;
+                    const tr = document.querySelector(`#cmdTableBody tr[data-idx="${idx}"]`);
+                    if (tr) {
+                        tr.querySelector('.item-check').checked = true;
+                        tr.querySelector('.item-qty').value = savedItem.quantite;
+                    }
+                });
+                updateSummary();
+                document.getElementById('draftIndicator').textContent = '📝 Édition du brouillon en cours — "Valider" créera la commande définitive.';
+            } catch (err) {
+                alert('❌ Erreur de chargement du brouillon : ' + err.message);
+            }
+        }
+
+        async function saveDraft() {
+            const siteKey = document.getElementById('siteSelect').value;
+            const fournisseur = document.getElementById('fournisseurSelect').value;
+            const items = collectSelectedItems();
+            if (items.length === 0) { alert('Sélectionne au moins un item avant d\'enregistrer un brouillon.'); return; }
+
+            const btn = document.getElementById('btnSaveDraft');
+            btn.disabled = true;
+            try {
+                const creePar = localStorage.getItem('loggedUser') || '';
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'saveDraft', {
+                    draftId: currentDraftId, anneeLong: selectedAnnee, site: siteKey,
+                    fournisseur: fournisseur, creePar: creePar, items: items
+                });
+                if (!res.success) throw new Error(res.error || 'Erreur script');
+                currentDraftId = res.data.draftId;
+                document.getElementById('draftIndicator').textContent = '📝 Brouillon enregistré — tu peux le reprendre plus tard.';
+                await loadDrafts();
+            } catch (err) {
+                alert('❌ Erreur : ' + err.message);
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         async function onSiteChange() {
@@ -258,9 +349,7 @@
             document.getElementById('btnSaveOrder').disabled = count === 0;
         }
 
-        async function saveOrder() {
-            const siteKey = document.getElementById('siteSelect').value;
-            const fournisseur = document.getElementById('fournisseurSelect').value;
+        function collectSelectedItems() {
             const items = [];
             document.querySelectorAll('#cmdTableBody tr').forEach(tr => {
                 const idx = parseInt(tr.dataset.idx, 10);
@@ -275,6 +364,13 @@
                     });
                 }
             });
+            return items;
+        }
+
+        async function saveOrder() {
+            const siteKey = document.getElementById('siteSelect').value;
+            const fournisseur = document.getElementById('fournisseurSelect').value;
+            const items = collectSelectedItems();
             if (items.length === 0) return;
 
             const btn = document.getElementById('btnSaveOrder');
@@ -282,14 +378,29 @@
             btn.textContent = '⏳ Enregistrement...';
             try {
                 const creePar = localStorage.getItem('loggedUser') || '';
-                const res = await callAppsScript(APPS_SCRIPT_URL, 'saveOrder', {
-                    anneeLong: selectedAnnee, site: siteKey, fournisseur: fournisseur, creePar: creePar, items: items
-                });
+                let res;
+                if (currentDraftId) {
+                    // On sauvegarde d'abord l'état actuel (au cas où des quantités
+                    // ont été modifiées depuis le chargement du brouillon), puis
+                    // on valide ce même brouillon plutôt que d'en créer un nouveau.
+                    await callAppsScript(APPS_SCRIPT_URL, 'saveDraft', {
+                        draftId: currentDraftId, anneeLong: selectedAnnee, site: siteKey,
+                        fournisseur: fournisseur, creePar: creePar, items: items
+                    });
+                    res = await callAppsScript(APPS_SCRIPT_URL, 'validateDraft', { draftId: currentDraftId });
+                } else {
+                    res = await callAppsScript(APPS_SCRIPT_URL, 'saveOrder', {
+                        anneeLong: selectedAnnee, site: siteKey, fournisseur: fournisseur, creePar: creePar, items: items
+                    });
+                }
                 if (!res.success) throw new Error(res.error || 'Erreur script');
                 const docLine = res.data.docUrl ? `\n📄 Document généré : ${res.data.docUrl}` : '\n⚠️ Document non généré (voir avec l\'administrateur).';
                 alert(`✅ Commande ${res.data.orderId} enregistrée (${items.length} items, ${res.data.totalHT.toFixed(2)} € HT).${docLine}`);
                 if (res.data.docUrl) window.open(res.data.docUrl, '_blank');
+                currentDraftId = null;
+                document.getElementById('draftIndicator').textContent = '';
                 onFournisseurChange();
+                loadDrafts();
             } catch (err) {
                 console.error(err);
                 alert('❌ Erreur lors de l\'enregistrement : ' + err.message);

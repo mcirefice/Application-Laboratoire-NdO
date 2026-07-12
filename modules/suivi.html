@@ -24,6 +24,7 @@
         .order-card.statut-commande { border-left-color: #3b82f6; }
         .order-card.statut-recu-partiel { border-left-color: #f59e0b; }
         .order-card.statut-recu-complet { border-left-color: #10b981; }
+        .order-card.statut-annulee { border-left-color: #991b1b; opacity: 0.65; }
         .order-card-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .order-id { font-weight: 700; color: #667eea; font-size: 15px; }
         .order-badge {
@@ -33,6 +34,7 @@
         .badge-commande { background: #dbeafe; color: #1d4ed8; }
         .badge-recu-partiel { background: #fef3c7; color: #92400e; }
         .badge-recu-complet { background: #d1fae5; color: #065f46; }
+        .badge-annulee { background: #fee2e2; color: #991b1b; }
         .order-meta { color: #666; font-size: 13px; margin-top: 6px; }
         .order-total { font-weight: 700; color: #333; font-size: 15px; }
 
@@ -114,6 +116,7 @@
                             <h3 id="detailTitle" style="color:#667eea;"></h3>
                             <button class="btn-refresh" onclick="closeDetail()">✕ Fermer</button>
                         </div>
+                        <div id="statusControls" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;"></div>
                         <div id="detailItems"></div>
                     </div>
                 </div>
@@ -131,7 +134,8 @@
             'À commander':   { classe: 'a-commander', badge: 'À commander' },
             'Commandé':      { classe: 'commande',    badge: 'Commandé' },
             'Reçu partiel':  { classe: 'recu-partiel', badge: 'Reçu partiel' },
-            'Reçu complet':  { classe: 'recu-complet', badge: 'Reçu complet' }
+            'Reçu complet':  { classe: 'recu-complet', badge: 'Reçu complet' },
+            'Annulée':       { classe: 'annulee',      badge: '🚫 Annulée' }
         };
 
         let currentOrders = [];
@@ -193,6 +197,8 @@
             panel.classList.add('open');
             panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
+            renderStatusControls();
+
             try {
                 const res = await callAppsScript(APPS_SCRIPT_URL, 'getOrderItems', { orderId });
                 if (!res.success) throw new Error(res.error || 'Erreur script');
@@ -200,6 +206,47 @@
             } catch (err) {
                 console.error(err);
                 itemsContainer.innerHTML = '<p class="empty-msg">❌ Erreur de chargement du détail.</p>';
+            }
+        }
+
+        function renderStatusControls() {
+            const order = currentOrders.find(o => o.orderId === openOrderId);
+            const container = document.getElementById('statusControls');
+            if (!order) { container.innerHTML = ''; return; }
+
+            if (order.statut === 'Annulée') {
+                container.innerHTML = '<p style="color:#991b1b;font-weight:700;">🚫 Commande annulée</p>';
+                return;
+            }
+
+            let boutons = '';
+            if (order.statut === 'À commander') {
+                boutons += `<button class="btn-refresh" onclick="markAsCommande('${order.orderId}')">📤 Marquer "Commandé"</button>`;
+            }
+            boutons += `<button class="btn-refresh" style="color:#991b1b;border-color:#991b1b;" onclick="cancelOrderUI('${order.orderId}')">🗑️ Annuler cette commande</button>`;
+            container.innerHTML = boutons;
+        }
+
+        async function markAsCommande(orderId) {
+            try {
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'setOrderStatus', { orderId, nouveauStatut: 'Commandé' });
+                if (!res.success) throw new Error(res.error || 'Erreur script');
+                await loadOrders();
+                await openDetail(orderId);
+            } catch (err) {
+                alert('❌ Erreur : ' + err.message);
+            }
+        }
+
+        async function cancelOrderUI(orderId) {
+            if (!confirm(`Confirmer l'annulation de la commande ${orderId} ?\n\nElle restera visible dans l'historique avec le statut "Annulée", mais ne sera plus modifiable.`)) return;
+            try {
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'cancelOrder', { orderId });
+                if (!res.success) throw new Error(res.error || 'Erreur script');
+                await loadOrders();
+                await openDetail(orderId);
+            } catch (err) {
+                alert('❌ Erreur : ' + err.message);
             }
         }
 

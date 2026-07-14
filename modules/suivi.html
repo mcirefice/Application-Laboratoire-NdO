@@ -183,7 +183,7 @@
                             <span class="order-badge badge-${info.classe}">${info.badge}</span>
                         </div>
                         <div class="order-meta">${o.fournisseur} · ${o.site === 'tocqueville' ? 'Tocqueville' : 'Saint-Pierre'} · ${dateStr} · ${o.nbItems} item(s) · Créé par ${o.creePar || '—'}</div>
-                        <div class="order-total">${(o.totalHT || 0).toFixed(2)} € HT</div>
+                        <div class="order-total">${(o.totalTTC || 0).toFixed(2)} € TTC</div>
                     </div>`;
             }).join('');
         }
@@ -262,7 +262,7 @@
                     <div class="detail-item" data-row="${it.rowIndex}">
                         <div class="detail-item-info">
                             <div class="detail-item-name">${escapeHtml(it.designation)}</div>
-                            <div class="detail-item-sub">Réf: ${escapeHtml(it.reference || '—')} · Qté: ${it.quantite} · ${(it.prixUnitaire || 0).toFixed(2)} € / unité</div>
+                            <div class="detail-item-sub">Réf: ${escapeHtml(it.reference || '—')} · Qté: ${it.quantite} · ${(it.prixUnitaireHT || 0).toFixed(2)} € HT / ${(it.prixUnitaireTTC || 0).toFixed(2)} € TTC par unité</div>
                         </div>
                         <button class="detail-item-status ${recu ? 'status-recu' : 'status-attente'}"
                                 onclick="toggleItemStatus(${it.rowIndex}, ${recu})">

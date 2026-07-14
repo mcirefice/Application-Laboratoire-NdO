@@ -108,9 +108,11 @@
                                     <th>Désignation</th>
                                     <th>Référence</th>
                                     <th>Prix unit. HT</th>
+                                    <th>Prix unit. TTC</th>
                                     <th>Qté prévisionnelle</th>
                                     <th>Qté à commander</th>
                                     <th>Total HT</th>
+                                    <th>Total TTC</th>
                                 </tr>
                             </thead>
                             <tbody id="cmdTableBody"></tbody>
@@ -120,7 +122,7 @@
                     <div class="cmd-summary" id="cmdSummary" style="display:none;">
                         <div>
                             <div id="cmdCount" style="font-size:14px;opacity:0.85;">0 item sélectionné</div>
-                            <div class="total" id="cmdTotal">0,00 € HT</div>
+                            <div class="total" id="cmdTotal">0,00 € TTC</div>
                             <div id="draftIndicator" style="font-size:12px;opacity:0.75;margin-top:4px;"></div>
                         </div>
                         <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -317,10 +319,12 @@
                     <td><input type="checkbox" class="item-check" onchange="updateSummary()"></td>
                     <td>${escapeHtml(item.designation)}</td>
                     <td>${formatReference(item.reference)}</td>
-                    <td>${item.prixUnitaire.toFixed(2)} €</td>
+                    <td>${item.prixUnitaireHT.toFixed(2)} €</td>
+                    <td>${item.prixUnitaireTTC.toFixed(2)} €</td>
                     <td>${item.quantitePrev}</td>
                     <td><input type="number" class="item-qty" min="0" step="1" value="${item.quantitePrev}" onchange="updateSummary()"></td>
-                    <td class="item-total">${(item.prixUnitaire * item.quantitePrev).toFixed(2)} €</td>
+                    <td class="item-total-ht">${(item.prixUnitaireHT * item.quantitePrev).toFixed(2)} €</td>
+                    <td class="item-total-ttc">${(item.prixUnitaireTTC * item.quantitePrev).toFixed(2)} €</td>
                 </tr>
             `).join('');
             document.getElementById('cmdTableWrap').style.display = 'block';
@@ -347,17 +351,24 @@
         }
 
         function updateSummary() {
-            let count = 0, total = 0;
+            let count = 0, totalHT = 0, totalTTC = 0;
             document.querySelectorAll('#cmdTableBody tr').forEach(tr => {
                 const idx = parseInt(tr.dataset.idx, 10);
                 const checked = tr.querySelector('.item-check').checked;
                 const qty = parseFloat(tr.querySelector('.item-qty').value) || 0;
-                const lineTotal = checked ? currentItems[idx].prixUnitaire * qty : 0;
-                tr.querySelector('.item-total').textContent = (currentItems[idx].prixUnitaire * qty).toFixed(2) + ' €';
-                if (checked && qty > 0) { count++; total += lineTotal; }
+                const item = currentItems[idx];
+                tr.querySelector('.item-total-ht').textContent = (item.prixUnitaireHT * qty).toFixed(2) + ' €';
+                tr.querySelector('.item-total-ttc').textContent = (item.prixUnitaireTTC * qty).toFixed(2) + ' €';
+                if (checked && qty > 0) {
+                    count++;
+                    totalHT += item.prixUnitaireHT * qty;
+                    totalTTC += item.prixUnitaireTTC * qty;
+                }
             });
             document.getElementById('cmdCount').textContent = `${count} item${count > 1 ? 's' : ''} sélectionné${count > 1 ? 's' : ''}`;
-            document.getElementById('cmdTotal').textContent = total.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' € HT';
+            document.getElementById('cmdTotal').textContent =
+                totalHT.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' € HT   —   ' +
+                totalTTC.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' € TTC';
             document.getElementById('btnSaveOrder').disabled = count === 0;
         }
 
@@ -371,7 +382,7 @@
                     const item = currentItems[idx];
                     items.push({
                         designation: item.designation, reference: item.reference,
-                        quantite: qty, prixUnitaire: item.prixUnitaire,
+                        quantite: qty, prixUnitaireHT: item.prixUnitaireHT, prixUnitaireTTC: item.prixUnitaireTTC,
                         typeDepense: item.typeDepense, codeAnalytique: item.codeAnalytique
                     });
                 }
@@ -407,7 +418,7 @@
                 }
                 if (!res.success) throw new Error(res.error || 'Erreur script');
                 const docLine = res.data.docUrl ? `\n📄 Document généré : ${res.data.docUrl}` : '\n⚠️ Document non généré (voir avec l\'administrateur).';
-                alert(`✅ Commande ${res.data.orderId} enregistrée (${items.length} items, ${res.data.totalHT.toFixed(2)} € HT).${docLine}`);
+                alert(`✅ Commande ${res.data.orderId} enregistrée (${items.length} items, ${res.data.totalHT.toFixed(2)} € HT / ${res.data.totalTTC.toFixed(2)} € TTC).${docLine}`);
                 if (res.data.docUrl) window.open(res.data.docUrl, '_blank');
                 currentDraftId = null;
                 document.getElementById('draftIndicator').textContent = '';

@@ -90,6 +90,12 @@
                         <div class="input-group" style="flex:0 0 auto;">
                             <button class="btn-refresh" onclick="window.open('https://drive.google.com/drive/folders/1umATpjVSLlpO4bCZatl58Xix1oD5gze4', '_blank')">📁 Ouvrir le Drive</button>
                         </div>
+                        <div class="input-group" style="flex:0 0 auto;">
+                            <button class="btn-refresh" onclick="promptAddFournisseur()">➕ Nouveau fournisseur</button>
+                        </div>
+                        <div class="input-group" style="flex:0 0 auto;">
+                            <button class="btn-refresh" style="color:#991b1b;border-color:#991b1b;" onclick="promptRemoveFournisseur()">🗑️ Supprimer ce fournisseur</button>
+                        </div>
                     </div>
 
                     <div id="draftsZone" style="margin-bottom:20px;"></div>
@@ -174,6 +180,45 @@
             currentDraftId = null;
             resetTable();
             loadDrafts();
+        }
+
+        async function promptAddFournisseur() {
+            const siteKey = document.getElementById('siteSelect').value;
+            if (!siteKey) { alert('Choisis d\'abord un site.'); return; }
+            const nom = prompt('Nom du nouveau fournisseur (ex: "Nom Société") :');
+            if (!nom || !nom.trim()) return;
+            if (!confirm(`Créer le fournisseur "${nom.trim()}" pour ${siteKey === 'tocqueville' ? 'Tocqueville' : 'Saint-Pierre'} — ${selectedAnnee} ?\n\nUn onglet vierge sera créé et ajouté aux tableaux Paramétrage et Récapitulatif.`)) return;
+
+            const creePar = localStorage.getItem('loggedUser') || '';
+            try {
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'addFournisseur', {
+                    anneeLong: selectedAnnee, site: siteKey, creePar: creePar, nomFournisseur: nom.trim()
+                });
+                if (!res.success) throw new Error(res.error || 'Erreur script');
+                alert(`✅ Fournisseur créé : ${res.data.onglet}`);
+                onSiteChange(); // recharge la liste des fournisseurs
+            } catch (err) {
+                alert('❌ Erreur : ' + err.message);
+            }
+        }
+
+        async function promptRemoveFournisseur() {
+            const siteKey = document.getElementById('siteSelect').value;
+            const fournisseur = document.getElementById('fournisseurSelect').value;
+            if (!siteKey || !fournisseur) { alert('Choisis d\'abord un site et un fournisseur.'); return; }
+            if (!confirm(`⚠️ Supprimer définitivement le fournisseur "${fournisseur}" (onglet, ligne Paramétrage, ligne Récapitulatif) pour ${selectedAnnee} ?\n\nL'historique des commandes déjà passées avec ce fournisseur reste intact dans le registre.`)) return;
+
+            const creePar = localStorage.getItem('loggedUser') || '';
+            try {
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'removeFournisseur', {
+                    anneeLong: selectedAnnee, site: siteKey, creePar: creePar, nomFournisseur: fournisseur
+                });
+                if (!res.success) throw new Error(res.error || 'Erreur script');
+                alert(`✅ Fournisseur supprimé : ${res.data.supprime}`);
+                onSiteChange(); // recharge la liste des fournisseurs
+            } catch (err) {
+                alert('❌ Erreur : ' + err.message);
+            }
         }
 
         async function loadDrafts() {

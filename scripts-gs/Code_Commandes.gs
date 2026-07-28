@@ -215,15 +215,40 @@ function creerOngletTechniciens(ss) {
   if (ss.getSheetByName('Techniciens')) return; // déjà présent, on ne touche à rien
 
   const sheet = ss.insertSheet('Techniciens');
-  sheet.getRange(1, 1, 1, 4).setValues([['Identifiant', 'Nom complet', 'Téléphone', 'Email']]);
+  sheet.getRange(1, 1, 1, 5).setValues([['Identifiant', 'Nom complet', 'Téléphone', 'Email', 'Site']]);
   sheet.setFrozenRows(1);
 
   // Pré-rempli avec les comptes connus de login.html — à compléter
-  // (téléphone/email) directement dans le Sheet, sans avoir besoin
-  // de retoucher le script.
+  // (téléphone/email/site) directement dans le Sheet, sans avoir besoin
+  // de retoucher le script. Colonne Site : "tocqueville", "saintpierre",
+  // ou "tous" pour un accès aux deux sites (ex: DDFPT).
   const comptes = ['m.cirefice', 'a.abidi', 'm.steuf', 'k.ovey', 'c.druot', 'm.duponchel', 'p.parisot'];
-  const rows = comptes.map(id => [id, '', '', '']);
-  sheet.getRange(2, 1, rows.length, 4).setValues(rows);
+  const rows = comptes.map(id => [id, '', '', '', id === 'm.cirefice' ? 'tous' : '']);
+  sheet.getRange(2, 1, rows.length, 5).setValues(rows);
+}
+
+/**
+ * À exécuter UNE SEULE FOIS si l'onglet Techniciens existait déjà avant
+ * l'ajout de la colonne Site. Sans effet si elle est déjà présente.
+ */
+function ajouterColonneSiteAuRegistreExistant() {
+  const sheet = getRegistreSheet('Techniciens');
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (headers.indexOf('Site') !== -1) {
+    Logger.log('Colonne Site déjà présente, rien à faire.');
+    return;
+  }
+  const nextCol = sheet.getLastColumn() + 1;
+  sheet.getRange(1, nextCol).setValue('Site');
+  // m.cirefice (DDFPT) reçoit "tous" par défaut ; les autres restent
+  // vides, à compléter directement dans le Sheet.
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0]).trim() === 'm.cirefice') {
+      sheet.getRange(i + 1, nextCol).setValue('tous');
+    }
+  }
+  Logger.log('Colonne "Site" ajoutée en colonne ' + nextCol + '.');
 }
 
 /**
@@ -234,18 +259,32 @@ function creerOngletTechniciens(ss) {
  */
 function getTechnicienInfo(identifiant) {
   const sheet = getRegistreSheet('Techniciens');
-  if (!sheet) return { nom: identifiant, telephone: '', email: '' };
+  if (!sheet) return { nom: identifiant, telephone: '', email: '', site: '' };
   const values = sheet.getDataRange().getValues();
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][0]).trim() === identifiant) {
       return {
         nom: values[i][1] || identifiant,
         telephone: values[i][2] || '',
-        email: values[i][3] || ''
+        email: values[i][3] || '',
+        site: String(values[i][4] || '').trim().toLowerCase()
       };
     }
   }
-  return { nom: identifiant, telephone: '', email: '' };
+  return { nom: identifiant, telephone: '', email: '', site: '' };
+}
+
+/**
+ * Vérifie qu'un identifiant a le droit d'agir sur un site donné :
+ * soit "tous" (DDFPT), soit exactement ce site. Lève une erreur sinon.
+ */
+function verifierPermissionSite(identifiant, site) {
+  const info = getTechnicienInfo(identifiant);
+  const SYNONYMES_TOUS = ['tous', 'les deux', 'tout', 'toutes', 'both', 'les 2'];
+  const accesTotal = SYNONYMES_TOUS.indexOf(info.site) !== -1;
+  if (!accesTotal && info.site !== site) {
+    throw new Error('Action réservée au DDFPT ou aux techniciens du site concerné.');
+  }
 }
 
 function getRegistreSheet(sheetName) {
@@ -263,6 +302,278 @@ function getRegistreSheet(sheetName) {
  * de suivi de réception à l'onglet "Détail" existant. Sans effet si
  * elles sont déjà présentes — sans risque de le relancer par erreur.
  */
+// ── MIGRATION COLONNE QUANTITÉ (à exécuter une seule fois, manuellement) ──
+// Déplace la colonne Quantité (I, 9e) entre Cdt (B) et Référence (C),
+// dans tous les onglets fournisseurs des 4 classeurs. Utilise
+// moveColumns() (pas un copier-coller) pour que les formules de
+// Prix HT / Prix TTC / Total HT / Total TTC restent justes après coup.
+
+const CLASSEURS_A_MIGRER = {
+  'Commandes_Saint-Pierre_2026-2027': '1OhgQoeoMAIx3LEnVwlLFPOWqJKt96vtNNCF-vED8wng',
+  'Commandes_Tocqueville_2026-2027': '1m_Z2vFtU2sFAMCSfvy_DKKPlF3x37ReF1IMMGulcbwY',
+  'Commandes_Saint-Pierre_VIERGE': '1iCZx0X7NiPvzo9wfjuFeHSYiIXAuhZkBjQ8Qc9R-P2U',
+  'Commandes_Tocqueville_VIERGE': '1MgNpi4bXxcXKXzX08JHugKrpOUvdmhfurDTZNDxnnCE'
+};
+const ONGLETS_A_IGNORER_MIGRATION = ['Paramétrage', 'Récapitulatif'];
+
+// ── MISE EN FORME DU RÉCAPITULATIF (colore en rose les cellules non nulles) ──
+
+/**
+ * Applique une mise en forme conditionnelle sur l'onglet "Récapitulatif"
+ * d'un classeur : toute cellule HT/TTC non nulle (colonnes C à P) passe
+ * en rose pastel, pour repérer d'un coup d'œil où il y a de l'activité.
+ * La zone de lignes est détectée automatiquement (de la ligne 5 jusqu'à
+ * juste avant la ligne "TOTAL"), donc pas besoin de l'ajuster à la main
+ * si le nombre de fournisseurs change.
+ */
+function appliquerMiseEnFormeRecap(sheetId, nomClasseur) {
+  const ss = SpreadsheetApp.openById(sheetId);
+  const sheet = ss.getSheetByName('Récapitulatif');
+  if (!sheet) { Logger.log('Onglet Récapitulatif introuvable pour ' + nomClasseur); return; }
+
+  // Repère la ligne "TOTAL" (colonne B) pour délimiter la zone de données.
+  const colB = sheet.getRange(1, 2, sheet.getLastRow(), 1).getValues();
+  let ligneTotal = -1;
+  for (let i = 0; i < colB.length; i++) {
+    if (String(colB[i][0]).trim().toUpperCase() === 'TOTAL') { ligneTotal = i + 1; break; }
+  }
+  const ligneDebut = 5;
+  const ligneFin = (ligneTotal !== -1) ? ligneTotal - 1 : sheet.getLastRow();
+  if (ligneFin < ligneDebut) { Logger.log('Aucune ligne de données trouvée pour ' + nomClasseur); return; }
+
+  const colDebut = 3;  // C
+  const colFin = 16;   // P (inclut les colonnes Totaux HT/TTC)
+  const range = sheet.getRange(ligneDebut, colDebut, ligneFin - ligneDebut + 1, colFin - colDebut + 1);
+
+  const rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenNumberNotEqualTo(0)
+    .setBackground('#f9d8e7') // rose pastel, harmonieux avec les teintes bleu/vert déjà en place
+    .setRanges([range])
+    .build();
+
+  // Retire une éventuelle règle identique déjà posée par un lancement
+  // précédent, pour ne pas empiler des doublons si on relance ce script.
+  const rulesExistantes = sheet.getConditionalFormatRules().filter(r => {
+    const ranges = r.getRanges();
+    return !(ranges.length === 1 && ranges[0].getA1Notation() === range.getA1Notation());
+  });
+  rulesExistantes.push(rule);
+  sheet.setConditionalFormatRules(rulesExistantes);
+
+  Logger.log('Mise en forme appliquée sur "' + nomClasseur + '" (lignes ' + ligneDebut + ' à ' + ligneFin + ').');
+}
+
+/**
+ * Applique la mise en forme sur les 4 classeurs en une fois.
+ */
+function appliquerMiseEnFormeRecapTousLesSheets() {
+  Object.keys(CLASSEURS_A_MIGRER).forEach(nom => {
+    appliquerMiseEnFormeRecap(CLASSEURS_A_MIGRER[nom], nom);
+  });
+  Logger.log('Mise en forme terminée sur les 4 classeurs.');
+}
+
+/**
+ * Ajoute "Code client" et "Contact entreprise" comme nouveaux en-têtes
+ * en colonnes C/D de la ligne "LISTE DES FOURNISSEURS" de Paramétrage,
+ * sur les 4 classeurs. N'écrase rien si déjà rempli (sûr à relancer).
+ * Puis, sur chaque onglet fournisseur : élargit la colonne Désignation,
+ * rétrécit Quantité/Prix/Totaux, aligne Désignation à gauche et tout le
+ * reste au centre, et met la ligne d'en-tête (ligne 3) en gras + fond
+ * gris clair.
+ */
+/**
+ * Force la même structure d'en-tête à 4 colonnes que celle faite à la
+ * main sur Saint-Pierre : "Numéro des onglets | LISTE DES FOURNISSEURS
+ * | Contact entreprise | Code client". Cherche le marqueur en colonne A
+ * OU B (robuste, peu importe l'état actuel de chaque classeur), et force
+ * le résultat final identique partout — sûr à relancer plusieurs fois.
+ */
+function corrigerEnTeteParametrageTousLesSheets() {
+  Object.keys(CLASSEURS_A_MIGRER).forEach(nomClasseur => {
+    const sheetId = CLASSEURS_A_MIGRER[nomClasseur];
+    const ss = SpreadsheetApp.openById(sheetId);
+    const paramSheet = ss.getSheetByName('Paramétrage');
+    if (!paramSheet) { Logger.log(nomClasseur + ' : onglet Paramétrage introuvable.'); return; }
+
+    const valeurs = paramSheet.getDataRange().getValues();
+    let ligneTrouvee = -1;
+    for (let i = 0; i < valeurs.length; i++) {
+      const c0 = String(valeurs[i][0] || '').trim().toUpperCase();
+      const c1 = String(valeurs[i][1] || '').trim().toUpperCase();
+      if (c0.startsWith('LISTE DES FOURNISSEURS') || c1.startsWith('LISTE DES FOURNISSEURS')) {
+        ligneTrouvee = i + 1;
+        break;
+      }
+    }
+    if (ligneTrouvee === -1) { Logger.log(nomClasseur + ' : ligne "LISTE DES FOURNISSEURS" introuvable.'); return; }
+
+    // Certains classeurs ont hérité d'une cellule fusionnée sur cette
+    // ligne (ancien format "titre unique") — il faut la défusionner
+    // avant d'écrire 4 valeurs distinctes, sinon seule la première
+    // s'affiche réellement (les autres sont "avalées" par la fusion).
+    const zoneEntete = paramSheet.getRange(ligneTrouvee, 1, 1, 4);
+    const fusionsExistantes = zoneEntete.getMergedRanges();
+    fusionsExistantes.forEach(f => f.breakApart());
+
+    paramSheet.getRange(ligneTrouvee, 1, 1, 4).setValues([[
+      'Numéro des onglets', 'LISTE DES FOURNISSEURS', 'Contact entreprise', 'Code client'
+    ]]);
+    paramSheet.getRange(ligneTrouvee, 1, 1, 4).setFontWeight('bold');
+    Logger.log(nomClasseur + ' : en-tête Paramétrage corrigé (ligne ' + ligneTrouvee + ').');
+  });
+  Logger.log('Correction terminée sur les 4 classeurs.');
+}
+
+function ameliorerMiseEnFormeSheetsCommandes() {
+  Object.keys(CLASSEURS_A_MIGRER).forEach(nomClasseur => {
+    const sheetId = CLASSEURS_A_MIGRER[nomClasseur];
+    const ss = SpreadsheetApp.openById(sheetId);
+
+    // 1) Paramétrage : ajoute les 2 nouvelles colonnes d'info fournisseur
+    const paramSheet = ss.getSheetByName('Paramétrage');
+    if (paramSheet) {
+      const valeurs = paramSheet.getDataRange().getValues();
+      for (let i = 0; i < valeurs.length; i++) {
+        if (String(valeurs[i][0]).trim().toUpperCase().startsWith('LISTE DES FOURNISSEURS')) {
+          const ligne = i + 1;
+          const celluleC = paramSheet.getRange(ligne, 3);
+          const celluleD = paramSheet.getRange(ligne, 4);
+          if (!celluleC.getValue()) { celluleC.setValue('Code client'); celluleC.setFontWeight('bold'); }
+          if (!celluleD.getValue()) { celluleD.setValue('Contact entreprise'); celluleD.setFontWeight('bold'); }
+          break;
+        }
+      }
+    } else {
+      Logger.log(nomClasseur + ' : onglet Paramétrage introuvable, ignoré.');
+    }
+
+    // 2) Onglets fournisseurs : largeurs, alignement, en-tête
+    let compteur = 0;
+    ss.getSheets().forEach(sheet => {
+      const nom = sheet.getName();
+      if (ONGLETS_A_IGNORER_MIGRATION.indexOf(nom) !== -1) return;
+      if (sheet.getLastColumn() < 9) return; // onglet trop court/vide
+
+      // Largeurs (post-migration : A Désignation, C Quantité, E Prix
+      // unitaire, H Prix HT, I Prix TTC, J Total HT, K Total TTC)
+      sheet.setColumnWidth(1, 260);
+      sheet.setColumnWidth(3, 70);
+      sheet.setColumnWidth(5, 85);
+      sheet.setColumnWidth(8, 85);
+      sheet.setColumnWidth(9, 85);
+      sheet.setColumnWidth(10, 90);
+      sheet.setColumnWidth(11, 90);
+
+      const lastRow = sheet.getLastRow();
+      const lastCol = sheet.getLastColumn();
+      if (lastRow >= 5) {
+        // Alignement sur la zone de données (ligne 5 et au-delà) :
+        // Désignation à gauche, tout le reste centré.
+        sheet.getRange(5, 1, lastRow - 4, 1).setHorizontalAlignment('left');
+        if (lastCol > 1) {
+          sheet.getRange(5, 2, lastRow - 4, lastCol - 1).setHorizontalAlignment('center');
+        }
+      }
+
+      // Ligne d'en-tête (ligne 3, ex: "Désignation produit | Cdt | ...") :
+      // gras + fond gris clair pour la distinguer du reste du tableau.
+      const ligneEntete = sheet.getRange(3, 1, 1, lastCol);
+      ligneEntete.setFontWeight('bold');
+      ligneEntete.setBackground('#f1f3f4');
+
+      compteur++;
+    });
+    Logger.log(nomClasseur + ' : ' + compteur + ' onglet(s) fournisseur mis en forme.');
+  });
+  Logger.log('Mise en forme colonnes/alignement/en-têtes terminée sur les 4 classeurs.');
+}
+
+/**
+ * ÉTAPE 1 — À lancer d'abord sur UN SEUL onglet de test pour vérifier
+ * visuellement (dans le Sheet) que les formules Prix HT / Total HT /
+ * Total TTC calculent toujours juste après le déplacement.
+ * Modifie NOM_CLASSEUR_TEST et NOM_ONGLET_TEST ci-dessous avant de lancer.
+ */
+function testMigrationUnOnglet() {
+  const NOM_CLASSEUR_TEST = 'Commandes_Tocqueville_2026-2027'; // à ajuster si besoin
+  const NOM_ONGLET_TEST = 'Amazone'; // à ajuster : le nom EXACT (ou approximatif) de l'onglet à tester
+
+  const sheetId = CLASSEURS_A_MIGRER[NOM_CLASSEUR_TEST];
+  const ss = SpreadsheetApp.openById(sheetId);
+  let sheet = ss.getSheetByName(NOM_ONGLET_TEST);
+
+  // Tolère un préfixe numéroté ("6-Amazone") comme dans listProduits().
+  if (!sheet) {
+    const normalize = s => String(s).replace(/^\s*\d+\s*-?\s*/, '').replace(/\s+/g, '').toLowerCase();
+    const target = normalize(NOM_ONGLET_TEST);
+    sheet = ss.getSheets().find(s => normalize(s.getName()) === target);
+  }
+
+  if (!sheet) {
+    const available = ss.getSheets().map(s => s.getName()).join(' | ');
+    Logger.log('Onglet introuvable : "' + NOM_ONGLET_TEST + '". Onglets disponibles : ' + available);
+    return;
+  }
+
+  Logger.log('Onglet réel trouvé : "' + sheet.getName() + '"');
+  deplacerColonneQuantite(sheet);
+  Logger.log('Migration test effectuée sur "' + sheet.getName() + '" du classeur "' + NOM_CLASSEUR_TEST + '". Va vérifier dans le Sheet que les formules Prix HT/Total HT/Total TTC affichent toujours les bons montants (pas de #REF! ni de 0 suspect).');
+}
+
+/**
+ * ÉTAPE 2 — Une fois le test validé, lance cette fonction pour migrer
+ * TOUS les onglets fournisseurs des 4 classeurs en une fois.
+ */
+function migrerTousLesClasseurs() {
+  Object.keys(CLASSEURS_A_MIGRER).forEach(nomClasseur => {
+    const sheetId = CLASSEURS_A_MIGRER[nomClasseur];
+    const ss = SpreadsheetApp.openById(sheetId);
+    const onglets = ss.getSheets();
+    let compteur = 0;
+    onglets.forEach(sheet => {
+      const nom = sheet.getName();
+      if (ONGLETS_A_IGNORER_MIGRATION.indexOf(nom) !== -1) return;
+      if (sheet.getLastColumn() < 9) return; // onglet trop court, rien à déplacer
+      deplacerColonneQuantite(sheet);
+      compteur++;
+    });
+    Logger.log(nomClasseur + ' : ' + compteur + ' onglet(s) migré(s).');
+  });
+  Logger.log('Migration terminée sur les 4 classeurs.');
+}
+
+function deplacerColonneQuantite(sheet) {
+  const COL_QUANTITE_ACTUELLE = 9; // I
+  const COL_DESTINATION = 3;       // C (juste après B=Cdt)
+
+  // Les lignes de titre/légende en haut de chaque onglet sont souvent des
+  // cellules fusionnées sur toute la largeur — Sheets refuse de déplacer
+  // une colonne à travers une fusion. On les repère, on les défusionne,
+  // puis on les refusionne à l'identique juste après (même étendue de
+  // colonnes au total, seul l'ordre interne change).
+  const mergedRanges = sheet.getRange(1, 1, sheet.getMaxRows(), sheet.getMaxColumns()).getMergedRanges();
+  const rangesARestaurer = [];
+  mergedRanges.forEach(range => {
+    const colDebut = range.getColumn();
+    const colFin = range.getLastColumn();
+    if (colDebut <= COL_QUANTITE_ACTUELLE && colFin >= 2) { // chevauche la zone B..I concernée par le déplacement
+      rangesARestaurer.push({
+        row: range.getRow(), col: range.getColumn(),
+        numRows: range.getNumRows(), numCols: range.getNumColumns()
+      });
+      range.breakApart();
+    }
+  });
+
+  const range = sheet.getRange(1, COL_QUANTITE_ACTUELLE, sheet.getMaxRows(), 1);
+  sheet.moveColumns(range, COL_DESTINATION);
+
+  rangesARestaurer.forEach(r => {
+    sheet.getRange(r.row, r.col, r.numRows, r.numCols).merge();
+  });
+}
+
 function ajouterColonnesReceptionAuRegistreExistant() {
   const sheet = getRegistreSheet('Détail');
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -322,9 +633,10 @@ function getOrderItems(orderId) {
     items.push({
       rowIndex: i + 1, // ligne réelle dans le Sheet (1-indexé, avec en-tête)
       designation: row[1], reference: row[2], quantite: row[3],
-      prixUnitaire: row[4], totalHT: row[5], typeDepense: row[6],
+      prixUnitaireHT: row[4], totalHT: row[5], typeDepense: row[6],
       codeAnalytique: row[7], statutReception: row[8] || 'En attente',
-      dateReception: row[9] || ''
+      dateReception: row[9] || '',
+      prixUnitaireTTC: row[10] || 0, totalTTC: row[11] || 0
     });
   }
   return items;
@@ -335,6 +647,27 @@ function getOrderItems(orderId) {
  * réelle dans le Sheet), puis recalcule automatiquement le statut
  * global de la commande dans l'onglet "Commandes".
  */
+/**
+ * Marque tous les items d'une commande comme "Reçu" en une fois —
+ * raccourci pour passer directement en "Reçu complet" sans cocher
+ * chaque item un par un.
+ */
+function markAllReceived(orderId) {
+  const detailSheet = getRegistreSheet('Détail');
+  const values = detailSheet.getDataRange().getValues();
+  const now = new Date();
+  let compteur = 0;
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0]) === orderId) {
+      detailSheet.getRange(i + 1, 9, 1, 2).setValues([['Reçu', now]]);
+      compteur++;
+    }
+  }
+  if (compteur === 0) throw new Error('Aucun item trouvé pour cette commande.');
+  const statutGlobal = recalculerStatutCommande(orderId);
+  return { orderId: orderId, statutGlobal: statutGlobal, itemsMarques: compteur };
+}
+
 function updateItemStatus(rowIndex, nouveauStatut) {
   const detailSheet = getRegistreSheet('Détail');
   const orderId = detailSheet.getRange(rowIndex, 1).getValue();
@@ -386,12 +719,14 @@ function recalculerStatutCommande(orderId) {
 }
 
 /**
- * Change manuellement le statut d'une commande vers "Commandé" —
- * la seule transition manuelle "en avant" en dehors du calcul auto
- * (Reçu partiel/complet), qui reste piloté par les items cochés.
+ * Change manuellement le statut d'une commande entre "À commander" et
+ * "Commandé" (dans les deux sens, pour pouvoir corriger une erreur).
+ * "Reçu partiel"/"Reçu complet" restent pilotés par les items cochés
+ * (voir recalculerStatutCommande) — sauf via markAllReceived() pour
+ * un passage direct en "Reçu complet".
  */
 function setOrderStatus(orderId, nouveauStatut) {
-  const AUTORISES = ['Commandé'];
+  const AUTORISES = ['À commander', 'Commandé'];
   if (AUTORISES.indexOf(nouveauStatut) === -1) {
     throw new Error('Statut non autorisé en changement manuel : ' + nouveauStatut);
   }
@@ -501,12 +836,18 @@ function saveOrder(payload) {
   const anneeCourt = anneeLongVersCourt(anneeLong);
   const seq = nextOrderSequence(siteInfo.code, anneeCourt);
   const seqStr = String(seq).padStart(2, '0');
-  const orderId = 'CMD-' + siteInfo.code + '-' + anneeCourt + '-' + seqStr + '-' + payload.fournisseur;
+  const codeCourt = 'CMD-' + siteInfo.code + '-' + anneeCourt + '-' + seqStr;
+  const orderId = codeCourt + '-' + payload.fournisseur;
   const now = new Date();
 
+  // On garde HT et TTC séparément (association = pas de récupération de
+  // TVA, donc les deux montants ont un vrai intérêt à être visibles).
   let totalHT = 0;
-  items.forEach(it => { totalHT += (it.prixUnitaire || 0) * (it.quantite || 0); });
-  const totalTTC = totalHT * 1.2; // TVA 20% par défaut — à ajuster si besoin de gérer plusieurs taux
+  let totalTTC = 0;
+  items.forEach(it => {
+    totalHT += (it.prixUnitaireHT || 0) * (it.quantite || 0);
+    totalTTC += (it.prixUnitaireTTC || 0) * (it.quantite || 0);
+  });
 
   const cmdSheet = getRegistreSheet('Commandes');
   cmdSheet.appendRow([
@@ -515,12 +856,20 @@ function saveOrder(payload) {
   ]);
   const newRow = cmdSheet.getLastRow();
 
+  // Colonnes 1 à 10 : structure historique (HT en position "Prix
+  // unitaire"/"Total HT"). Colonnes 11-12 ajoutées à la fin : TTC —
+  // choix délibéré pour ne pas décaler les colonnes Statut réception
+  // (9) / Date réception (10) déjà en place et déjà référencées ailleurs.
   const detailSheet = getRegistreSheet('Détail');
   items.forEach(it => {
+    const totalLigneHT = (it.prixUnitaireHT || 0) * (it.quantite || 0);
+    const totalLigneTTC = (it.prixUnitaireTTC || 0) * (it.quantite || 0);
     detailSheet.appendRow([
       orderId, it.designation, it.reference || '', it.quantite,
-      it.prixUnitaire || 0, (it.prixUnitaire || 0) * (it.quantite || 0),
-      it.typeDepense || '', it.codeAnalytique || ''
+      it.prixUnitaireHT || 0, totalLigneHT,
+      it.typeDepense || '', it.codeAnalytique || '',
+      'En attente', '',
+      it.prixUnitaireTTC || 0, totalLigneTTC
     ]);
   });
 
@@ -528,7 +877,7 @@ function saveOrder(payload) {
   // de la commande si elle échoue (la commande reste sauvegardée quoi qu'il arrive).
   let docUrl = '';
   try {
-    docUrl = generateOrderDoc(orderId, payload, items, totalHT, totalTTC, now, siteInfo, anneeLong);
+    docUrl = generateOrderDoc(orderId, codeCourt, payload, items, totalHT, totalTTC, now, siteInfo, anneeLong);
     cmdSheet.getRange(newRow, 11).setValue(docUrl); // colonne K = "Lien Doc généré"
   } catch (docErr) {
     Logger.log('Erreur génération du document pour ' + orderId + ' : ' + docErr.message);
@@ -585,7 +934,7 @@ const TEMPLATE_DOC_ID = '1Tn7lhITZHwMKDGx-_I92zX6VYvAs0kLOMzhfZxAUxnA';
  * balises texte, et insère le tableau des produits à l'emplacement de
  * la balise {{TABLEAU_PRODUITS}}.
  */
-function generateOrderDoc(orderId, payload, items, totalHT, totalTTC, dateCreation, siteInfo, anneeLong) {
+function generateOrderDoc(orderId, codeCourt, payload, items, totalHT, totalTTC, dateCreation, siteInfo, anneeLong) {
   const folder = getOrCreateDocsFolder(siteInfo, anneeLong, payload.site);
   const docName = orderId + ' - ' + payload.fournisseur;
 
@@ -595,15 +944,19 @@ function generateOrderDoc(orderId, payload, items, totalHT, totalTTC, dateCreati
   const body = doc.getBody();
 
   const tech = getTechnicienInfo(payload.creePar);
+  const contactFournisseur = getFournisseurContact(anneeLong, payload.site, payload.fournisseur);
   const dateStr = Utilities.formatDate(dateCreation, Session.getScriptTimeZone(), 'dd/MM/yyyy');
 
   // Remplacement des balises texte simples (accepte {{X}} et {{ X }})
   const remplacements = {
     'NUMERO_COMMANDE': orderId,
+    'CODE_COURT': codeCourt,
     'CREE_PAR': tech.nom,
     'TELEPHONE_LABO': tech.telephone,
     'MAIL_TECHNICIEN': tech.email,
     'FOURNISSEUR': payload.fournisseur,
+    'CONTACT_ENTREPRISE': contactFournisseur.contactEntreprise,
+    'CODE_CLIENT': contactFournisseur.codeClient,
     'SITE': siteInfo.dossier,
     'DATE': dateStr,
     'TOTAL_HT': totalHT.toFixed(2) + ' €',
@@ -613,69 +966,218 @@ function generateOrderDoc(orderId, payload, items, totalHT, totalTTC, dateCreati
     body.replaceText('\\{\\{\\s*' + cle + '\\s*\\}\\}', remplacements[cle]);
   });
 
+  // body.replaceText() ne cherche que dans le corps du document — il faut
+  // traiter l'en-tête et le pied de page séparément si des balises y sont
+  // placées (ex: {{CODE_COURT}} en haut de page pour l'archivage papier).
+  const entete = doc.getHeader();
+  if (entete) {
+    Object.keys(remplacements).forEach(cle => {
+      entete.replaceText('\\{\\{\\s*' + cle + '\\s*\\}\\}', remplacements[cle]);
+    });
+  }
+  const piedDePage = doc.getFooter();
+  if (piedDePage) {
+    Object.keys(remplacements).forEach(cle => {
+      piedDePage.replaceText('\\{\\{\\s*' + cle + '\\s*\\}\\}', remplacements[cle]);
+    });
+  }
+
   // Insertion du tableau produits à l'emplacement de {{TABLEAU_PRODUITS}},
   // suivi d'un récapitulatif par code analytique (pour le suivi budgétaire).
+  // Le tableau produits n'affiche que le TTC (l'association ne récupère
+  // pas la TVA) — le HT reste dans le tableau de répartition analytique.
   const marqueur = body.findText('\\{\\{\\s*TABLEAU_PRODUITS\\s*\\}\\}');
-  const tableData = [['Désignation', 'Référence', 'Qté', 'Prix unit. HT', 'Total HT']];
+  const tableData = [['Désignation', 'Référence', 'Cdt', 'Qté', 'Prix unit. TTC', 'Total TTC']];
   items.forEach(it => {
-    const ligneTotal = (it.prixUnitaire || 0) * (it.quantite || 0);
+    const ligneTotalTTC = (it.prixUnitaireTTC || 0) * (it.quantite || 0);
     tableData.push([
-      it.designation, it.reference || '', String(it.quantite),
-      (it.prixUnitaire || 0).toFixed(2) + ' €', ligneTotal.toFixed(2) + ' €'
+      it.designation, it.reference || '', it.cdt || '', String(it.quantite),
+      (it.prixUnitaireTTC || 0).toFixed(2) + ' €', ligneTotalTTC.toFixed(2) + ' €'
     ]);
   });
   const recapData = buildRecapAnalytique(items);
+  let tableProduits;
+  let tableRecap;
 
   if (marqueur) {
     const paragrapheMarqueur = marqueur.getElement().getParent();
     const indexMarqueur = body.getChildIndex(paragrapheMarqueur);
 
-    body.insertTable(indexMarqueur, tableData);
-    if (recapData.length > 1) {
-      const recapTitre = body.insertParagraph(indexMarqueur + 1, 'Récapitulatif par code analytique');
-      recapTitre.editAsText().setBold(true);
-      body.insertTable(indexMarqueur + 2, recapData);
-    }
+    tableProduits = body.insertTable(indexMarqueur, tableData);
+
+    const pTotal = body.insertParagraph(indexMarqueur + 1, 'Total HT : ' + totalHT.toFixed(2) + ' €   —   Total TTC : ' + totalTTC.toFixed(2) + ' €');
+    pTotal.editAsText().setBold(true);
+
+    // Espace plus généreux avant le tableau analytique (2 lignes vides
+    // avec un peu de marge, plutôt qu'un simple paragraphe collé).
+    const espace1 = body.insertParagraph(indexMarqueur + 2, '');
+    espace1.setSpacingBefore(6).setSpacingAfter(6);
+    const espace2 = body.insertParagraph(indexMarqueur + 3, '');
+    espace2.setSpacingBefore(6).setSpacingAfter(6);
+
+    const recapTitre = body.insertParagraph(indexMarqueur + 4, 'Répartition par code analytique');
+    recapTitre.editAsText().setBold(true);
+    tableRecap = body.insertTable(indexMarqueur + 5, recapData);
+
     body.removeChild(paragrapheMarqueur); // retire la ligne de balise, devenue inutile
   } else {
     // Repli si la balise a été supprimée par erreur du modèle : ajoute tout à la fin.
-    body.appendTable(tableData);
-    if (recapData.length > 1) {
-      const recapTitre = body.appendParagraph('Récapitulatif par code analytique');
-      recapTitre.editAsText().setBold(true);
-      body.appendTable(recapData);
-    }
+    tableProduits = body.appendTable(tableData);
+    const pTotal = body.appendParagraph('Total HT : ' + totalHT.toFixed(2) + ' €   —   Total TTC : ' + totalTTC.toFixed(2) + ' €');
+    pTotal.editAsText().setBold(true);
+    const espace1 = body.appendParagraph('');
+    espace1.setSpacingBefore(6).setSpacingAfter(6);
+    const espace2 = body.appendParagraph('');
+    espace2.setSpacingBefore(6).setSpacingAfter(6);
+    const recapTitre = body.appendParagraph('Répartition par code analytique');
+    recapTitre.editAsText().setBold(true);
+    tableRecap = body.appendTable(recapData);
   }
+
+  // Mise en forme du tableau produits : Désignation plus large, en-tête
+  // gras + fond gris clair, montants centrés (Désignation reste à gauche).
+  mettreEnFormeTableauProduits(tableProduits);
+
+  // Le tableau analytique ne sert qu'à la comptabilité interne — police
+  // plus petite pour rester discret par rapport au tableau produits.
+  reduireTaillePoliceTable(tableRecap, 9);
 
   doc.saveAndClose();
   return copyFile.getUrl();
 }
 
+// Les 5 catégories de code analytique toujours affichées dans le Doc,
+// même à 0€ (avec une croix ✗ plutôt que "0,00 €"). La correspondance
+// avec la vraie valeur du Sheet ignore accents, espaces et tirets, pour
+// matcher "LYCEE GENERAL", "Lycée Général", "lycee-general" etc.
+const CODES_ANALYTIQUES_FIXES = [
+  { cle: 'college', libelle: 'Collège' },
+  { cle: 'lyceegeneral', libelle: 'Lycée général' },
+  { cle: 'lyceetechnologique', libelle: 'Lycée technologique' },
+  { cle: 'btspublicchimie', libelle: 'BTS-Public-Chimie' },
+  { cle: 'pourtous', libelle: 'Pour tous' }
+];
+
+function normaliserCodeAnalytique(s) {
+  return String(s)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\s-]+/g, '')
+    .toLowerCase();
+}
+
 /**
- * Regroupe les items par code analytique et calcule le total HT de
- * chaque code, pour le suivi budgétaire prévisionnel vs réel.
- * Renvoie un tableau prêt pour insertTable/appendTable, avec une
- * dernière ligne "TOTAL". Items sans code analytique regroupés sous
- * "(non renseigné)".
+ * Regroupe les items par code analytique, sur une liste FIXE de 5
+ * catégories toujours affichées (même à 0€, avec une croix ✗). Les
+ * montants ne correspondant à aucune des 5 catégories connues sont
+ * ajoutés dans une ligne "Autre" de sécurité, pour ne jamais perdre
+ * silencieusement une somme mal catégorisée.
  */
+/**
+ * Met en forme le tableau produits du Doc : colonne Désignation plus
+ * large, ligne d'en-tête en gras avec fond gris clair, montants
+ * centrés (horizontalement et verticalement), Désignation alignée à
+ * gauche.
+ */
+/**
+ * Réduit la taille de police de toutes les cellules d'un tableau — sert
+ * à rendre le tableau analytique plus discret que le tableau produits.
+ */
+function reduireTaillePoliceTable(table, taille) {
+  if (!table) return;
+  for (let r = 0; r < table.getNumRows(); r++) {
+    const ligne = table.getRow(r);
+    for (let c = 0; c < ligne.getNumCells(); c++) {
+      ligne.getCell(c).editAsText().setFontSize(taille);
+    }
+  }
+}
+
+function mettreEnFormeTableauProduits(table) {
+  if (!table) return;
+  const nbColonnes = table.getRow(0).getNumCells();
+
+  // Largeurs (en points) : Désignation nettement plus large que le reste.
+  table.setColumnWidth(0, 220);
+  for (let c = 1; c < nbColonnes; c++) {
+    table.setColumnWidth(c, 75);
+  }
+
+  for (let r = 0; r < table.getNumRows(); r++) {
+    const ligne = table.getRow(r);
+    const estEntete = (r === 0);
+    for (let c = 0; c < nbColonnes; c++) {
+      const cellule = ligne.getCell(c);
+      cellule.setVerticalAlignment(DocumentApp.VerticalAlignment.CENTER);
+
+      if (estEntete) {
+        cellule.setBackgroundColor('#f1f3f4');
+        cellule.editAsText().setBold(true);
+      }
+
+      // Alignement horizontal du texte : Désignation (colonne 0) à
+      // gauche, tout le reste centré.
+      const paragraphe = cellule.getChild(0).asParagraph();
+      paragraphe.setAlignment(c === 0 ? DocumentApp.HorizontalAlignment.LEFT : DocumentApp.HorizontalAlignment.CENTER);
+    }
+  }
+}
+
+/**
+ * Lit le "Contact entreprise" et le "Code client" pour un fournisseur
+ * donné, depuis la liste dans l'onglet Paramétrage (colonnes C et D,
+ * ajoutées à côté du nom). Renvoie des valeurs vides si non trouvé ou
+ * pas encore complété — ne bloque jamais la génération du document.
+ */
+function getFournisseurContact(anneeLong, siteKey, nomFournisseur) {
+  try {
+    const ss = openSiteSheet(anneeLong, siteKey);
+    const paramSheet = ss.getSheetByName('Paramétrage');
+    if (!paramSheet) return { contactEntreprise: '', codeClient: '' };
+
+    const valeurs = paramSheet.getDataRange().getValues();
+    for (let i = 0; i < valeurs.length; i++) {
+      if (String(valeurs[i][1] || '').trim() === nomFournisseur.trim()) {
+        return {
+          contactEntreprise: String(valeurs[i][2] || ''),
+          codeClient: String(valeurs[i][3] || '')
+        };
+      }
+    }
+  } catch (err) {
+    Logger.log('Erreur lecture contact fournisseur : ' + err.message);
+  }
+  return { contactEntreprise: '', codeClient: '' };
+}
+
 function buildRecapAnalytique(items) {
-  const totauxParCode = {};
+  const totauxHT = {};
+  const totauxTTC = {};
+  CODES_ANALYTIQUES_FIXES.forEach(c => { totauxHT[c.cle] = 0; totauxTTC[c.cle] = 0; });
+  let autresHT = 0;
+  let autresTTC = 0;
+
   items.forEach(it => {
-    const code = (it.codeAnalytique && String(it.codeAnalytique).trim()) || '(non renseigné)';
-    const montant = (it.prixUnitaire || 0) * (it.quantite || 0);
-    totauxParCode[code] = (totauxParCode[code] || 0) + montant;
+    const norm = normaliserCodeAnalytique(it.codeAnalytique || '');
+    const montantHT = (it.prixUnitaireHT || 0) * (it.quantite || 0);
+    const montantTTC = (it.prixUnitaireTTC || 0) * (it.quantite || 0);
+    const trouve = CODES_ANALYTIQUES_FIXES.find(c => c.cle === norm);
+    if (trouve) { totauxHT[trouve.cle] += montantHT; totauxTTC[trouve.cle] += montantTTC; }
+    else { autresHT += montantHT; autresTTC += montantTTC; }
   });
 
-  const codes = Object.keys(totauxParCode).sort();
-  if (codes.length === 0) return [];
-
-  const recap = [['Code analytique', 'Total HT']];
-  let totalGeneral = 0;
-  codes.forEach(code => {
-    recap.push([code, totauxParCode[code].toFixed(2) + ' €']);
-    totalGeneral += totauxParCode[code];
+  const recap = [['Code analytique', 'Montant HT', 'Montant TTC']];
+  CODES_ANALYTIQUES_FIXES.forEach(c => {
+    const valHT = totauxHT[c.cle];
+    const valTTC = totauxTTC[c.cle];
+    recap.push([
+      c.libelle,
+      valHT > 0 ? valHT.toFixed(2) + ' €' : '✗',
+      valTTC > 0 ? valTTC.toFixed(2) + ' €' : '✗'
+    ]);
   });
-  recap.push(['TOTAL', totalGeneral.toFixed(2) + ' €']);
+  if (autresTTC > 0) {
+    recap.push(['Autre / non reconnu', autresHT.toFixed(2) + ' €', autresTTC.toFixed(2) + ' €']);
+  }
   return recap;
 }
 
@@ -775,6 +1277,9 @@ function doPost(e) {
       case 'setOrderStatus':
         result = setOrderStatus(body.orderId, body.nouveauStatut);
         break;
+      case 'markAllReceived':
+        result = markAllReceived(body.orderId);
+        break;
       case 'cancelOrder':
         result = cancelOrder(body.orderId);
         break;
@@ -792,6 +1297,12 @@ function doPost(e) {
         break;
       case 'validateDraft':
         result = validateDraft(body.draftId);
+        break;
+      case 'addFournisseur':
+        result = ajouterFournisseur(body.anneeLong, body.site, body.creePar, body.nomFournisseur);
+        break;
+      case 'removeFournisseur':
+        result = supprimerFournisseur(body.anneeLong, body.site, body.creePar, body.nomFournisseur);
         break;
       default:
         return jsonResponse({ success: false, error: 'Action inconnue : ' + action });
@@ -812,6 +1323,156 @@ function openSiteSheet(anneeLong, siteKey) {
   return SpreadsheetApp.openById(sheetId);
 }
 
+// ── GESTION DYNAMIQUE DES FOURNISSEURS (ajout / suppression) ────────
+
+/**
+ * Ajoute un nouveau fournisseur : duplique un onglet vierge depuis le
+ * modèle VIERGE du site, l'ajoute à la liste dans Paramétrage, et ajoute
+ * une ligne de formules dans Récapitulatif.
+ */
+function ajouterFournisseur(anneeLong, siteKey, creePar, nomFournisseur) {
+  verifierPermissionSite(creePar, siteKey);
+  if (!nomFournisseur || !nomFournisseur.trim()) throw new Error('Nom de fournisseur manquant.');
+
+  const ss = openSiteSheet(anneeLong, siteKey);
+  const paramSheet = ss.getSheetByName('Paramétrage');
+  if (!paramSheet) throw new Error('Onglet Paramétrage introuvable.');
+
+  const valeurs = paramSheet.getDataRange().getValues();
+  let ligneMarqueur = -1;
+  for (let i = 0; i < valeurs.length; i++) {
+    const c0 = String(valeurs[i][0] || '').trim().toUpperCase();
+    const c1 = String(valeurs[i][1] || '').trim().toUpperCase();
+    if (c0.startsWith('LISTE DES FOURNISSEURS') || c1.startsWith('LISTE DES FOURNISSEURS')) { ligneMarqueur = i; break; }
+  }
+  if (ligneMarqueur === -1) throw new Error('Liste des fournisseurs introuvable dans Paramétrage.');
+
+  // Trouve la dernière ligne de la liste (numéro le plus grand) pour
+  // déterminer le numéro du nouveau fournisseur et où l'insérer.
+  let derniereLigne = ligneMarqueur;
+  let dernierNumero = 0;
+  for (let i = ligneMarqueur + 1; i < valeurs.length; i++) {
+    const num = parseInt(valeurs[i][0], 10);
+    const nom = String(valeurs[i][1] || '').trim();
+    if (isNaN(num) || !nom) break; // fin de la liste
+    derniereLigne = i;
+    dernierNumero = num;
+  }
+  const nouveauNumero = dernierNumero + 1;
+  const nomOnglet = nouveauNumero + '-' + nomFournisseur.trim().replace(/\s+/g, '');
+
+  if (ss.getSheetByName(nomOnglet)) throw new Error('Un onglet nommé "' + nomOnglet + '" existe déjà.');
+
+  // 1) Duplique un onglet vierge depuis le modèle VIERGE du site
+  const viergeId = MODELES[siteKey];
+  if (!viergeId) throw new Error('Modèle VIERGE introuvable pour ce site.');
+  const viergeSS = SpreadsheetApp.openById(viergeId);
+  const ongletModele = viergeSS.getSheets().find(s =>
+    ONGLETS_A_IGNORER_MIGRATION.indexOf(s.getName()) === -1 && s.getLastColumn() >= 9
+  );
+  if (!ongletModele) throw new Error('Aucun onglet fournisseur modèle trouvé dans le VIERGE.');
+
+  const nouvelOnglet = ongletModele.copyTo(ss);
+  nouvelOnglet.setName(nomOnglet);
+  // Vide les éventuelles données de démo copiées depuis le modèle
+  // (le VIERGE est censé être vide, mais on sécurise quand même).
+  if (nouvelOnglet.getLastRow() > 4) {
+    nouvelOnglet.getRange(5, 1, nouvelOnglet.getLastRow() - 4, nouvelOnglet.getLastColumn()).clearContent();
+  }
+
+  // 2) Ajoute la ligne dans Paramétrage, juste après la dernière existante
+  paramSheet.insertRowAfter(derniereLigne + 1);
+  paramSheet.getRange(derniereLigne + 2, 1, 1, 2).setValues([[nouveauNumero, nomFournisseur.trim()]]);
+
+  // 3) Ajoute la ligne de formules dans Récapitulatif, juste avant la
+  // ligne TOTAL (l'insertion à l'intérieur de la plage fait que Sheets
+  // étend automatiquement la formule SUM du TOTAL).
+  const recapSheet = ss.getSheetByName('Récapitulatif');
+  if (recapSheet) {
+    const recapValeurs = recapSheet.getDataRange().getValues();
+    let ligneTotal = -1;
+    for (let i = 0; i < recapValeurs.length; i++) {
+      if (String(recapValeurs[i][1] || recapValeurs[i][0] || '').trim().toUpperCase() === 'TOTAL') { ligneTotal = i + 1; break; }
+    }
+    if (ligneTotal !== -1) {
+      recapSheet.insertRowBefore(ligneTotal);
+      const nouvelleLigne = ligneTotal;
+      const types = [
+        ['Consommable', 'C'], ['Investissement', 'E'], ['Maintenance', 'G'],
+        ['Projet-PTA', 'I'], ['Abonnement', 'K'], ['Épreuves', 'M']
+      ];
+      const formulesHT = [];
+      const formulesTTC = [];
+      types.forEach(([type]) => {
+        formulesHT.push(`=IFERROR(SUMIF('${nomOnglet}'!M5:M200;"${type}";'${nomOnglet}'!J5:J200);0)`);
+        formulesTTC.push(`=IFERROR(SUMIF('${nomOnglet}'!M5:M200;"${type}";'${nomOnglet}'!K5:K200);0)`);
+      });
+      recapSheet.getRange(nouvelleLigne, 1, 1, 2).setValues([[nouveauNumero, nomFournisseur.trim()]]);
+      // Colonnes C à N en alternance HT/TTC
+      for (let t = 0; t < 6; t++) {
+        recapSheet.getRange(nouvelleLigne, 3 + t * 2).setFormula(formulesHT[t]);
+        recapSheet.getRange(nouvelleLigne, 4 + t * 2).setFormula(formulesTTC[t]);
+      }
+      recapSheet.getRange(nouvelleLigne, 15).setFormula(`=SUM(C${nouvelleLigne};E${nouvelleLigne};G${nouvelleLigne};I${nouvelleLigne};K${nouvelleLigne};M${nouvelleLigne})`);
+      recapSheet.getRange(nouvelleLigne, 16).setFormula(`=SUM(D${nouvelleLigne};F${nouvelleLigne};H${nouvelleLigne};J${nouvelleLigne};L${nouvelleLigne};N${nouvelleLigne})`);
+    } else {
+      Logger.log('Ligne TOTAL introuvable dans Récapitulatif — ligne fournisseur non ajoutée là-bas, à faire à la main.');
+    }
+  }
+
+  return { numero: nouveauNumero, onglet: nomOnglet };
+}
+
+/**
+ * Supprime un fournisseur : retire son onglet, sa ligne dans
+ * Paramétrage, et sa ligne dans Récapitulatif. Ne supprime jamais
+ * l'historique des commandes déjà passées (reste dans le registre,
+ * complètement indépendant de ces Sheets).
+ */
+function supprimerFournisseur(anneeLong, siteKey, creePar, nomFournisseur) {
+  verifierPermissionSite(creePar, siteKey);
+
+  const ss = openSiteSheet(anneeLong, siteKey);
+
+  // Trouve l'onglet réel (tolère le préfixe numéroté), comme listProduits().
+  let sheet = ss.getSheetByName(nomFournisseur);
+  if (!sheet) {
+    const normalize = s => String(s).replace(/^\s*\d+\s*-?\s*/, '').replace(/\s+/g, '').toLowerCase();
+    const target = normalize(nomFournisseur);
+    sheet = ss.getSheets().find(s => normalize(s.getName()) === target);
+  }
+  if (!sheet) throw new Error('Onglet fournisseur introuvable : ' + nomFournisseur);
+  const nomOngletReel = sheet.getName();
+
+  ss.deleteSheet(sheet);
+
+  // Retire la ligne dans Paramétrage
+  const paramSheet = ss.getSheetByName('Paramétrage');
+  if (paramSheet) {
+    const valeurs = paramSheet.getDataRange().getValues();
+    for (let i = 0; i < valeurs.length; i++) {
+      if (String(valeurs[i][1] || '').trim() === nomFournisseur.trim()) {
+        paramSheet.deleteRow(i + 1);
+        break;
+      }
+    }
+  }
+
+  // Retire la ligne dans Récapitulatif
+  const recapSheet = ss.getSheetByName('Récapitulatif');
+  if (recapSheet) {
+    const valeurs = recapSheet.getDataRange().getValues();
+    for (let i = 0; i < valeurs.length; i++) {
+      if (String(valeurs[i][1] || '').trim() === nomFournisseur.trim()) {
+        recapSheet.deleteRow(i + 1);
+        break;
+      }
+    }
+  }
+
+  return { supprime: nomOngletReel };
+}
+
 /* ── Liste des fournisseurs depuis l'onglet "Paramétrage" ──
    Repère la ligne "LISTE DES FOURNISSEURS" puis lit les lignes
    suivantes (format "N°, Nom fournisseur") jusqu'à une ligne vide
@@ -824,8 +1485,16 @@ function listFournisseurs(anneeLong, siteKey) {
   const values = sheet.getDataRange().getValues();
   let startRow = -1;
   for (let i = 0; i < values.length; i++) {
+    // Le titre "LISTE DES FOURNISSEURS" peut être en colonne A (ancien
+    // format, une seule case titre) ou en colonne B (nouveau format,
+    // 4 en-têtes distincts : Numéro des onglets | LISTE DES FOURNISSEURS
+    // | Contact entreprise | Code client) — on vérifie les deux.
     const cell0 = String(values[i][0] || '').trim().toUpperCase();
-    if (cell0.startsWith('LISTE DES FOURNISSEURS')) { startRow = i + 1; break; }
+    const cell1 = String(values[i][1] || '').trim().toUpperCase();
+    if (cell0.startsWith('LISTE DES FOURNISSEURS') || cell1.startsWith('LISTE DES FOURNISSEURS')) {
+      startRow = i + 1;
+      break;
+    }
   }
   if (startRow === -1) return [];
 
@@ -846,6 +1515,116 @@ function listFournisseurs(anneeLong, siteKey) {
    Référence, Prix unitaire, Saisie en, TVA, Prix HT, Prix TTC,
    Quantité, Total HT, Total TTC, Code analytique, Type de dépense.
    On ignore les lignes vides, légendes "(...)" et lignes de total. */
+/**
+ * FONCTION DE DIAGNOSTIC TEMPORAIRE — à lancer depuis l'éditeur pour
+ * comprendre pourquoi un fournisseur renvoie 0 produit. Affiche dans
+ * les journaux : le nombre de lignes brutes lues, puis le détail de
+ * chaque ligne et pourquoi elle est gardée ou filtrée.
+ */
+/**
+ * FONCTION DE DIAGNOSTIC TEMPORAIRE — pour comprendre pourquoi
+ * listFournisseurs() renvoie une liste vide sur un site donné.
+ * Affiche dans les journaux les 5 premières lignes autour du marqueur
+ * recherché, et le résultat final.
+ */
+/**
+ * FONCTION DE DIAGNOSTIC TEMPORAIRE — affiche les 3 premières lignes de
+ * produits d'Amazone/Tocqueville, colonne par colonne, pour vérifier
+ * que la migration de la colonne Quantité s'est bien faite comme sur
+ * les autres onglets.
+ */
+function diagnosticColonnesAmazone() {
+  const ss = openSiteSheet('2026-2027', 'tocqueville');
+  let sheet = ss.getSheetByName('Amazone');
+  if (!sheet) {
+    const normalize = s => String(s).replace(/^\s*\d+\s*-?\s*/, '').replace(/\s+/g, '').toLowerCase();
+    sheet = ss.getSheets().find(s => normalize(s.getName()) === 'amazone');
+  }
+  if (!sheet) { Logger.log('Onglet Amazone introuvable.'); return; }
+  Logger.log('Onglet réel : ' + sheet.getName());
+
+  const lettres = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'];
+  const valeurs = sheet.getRange(3, 1, 8, 13).getValues(); // ligne d'en-tête (3) + 7 lignes
+  valeurs.forEach((row, i) => {
+    let ligne = 'Ligne ' + (3 + i) + ' : ';
+    row.forEach((val, c) => { ligne += lettres[c] + '="' + val + '" '; });
+    Logger.log(ligne);
+  });
+}
+
+function diagnosticListFournisseurs() {
+  const anneeLong = '2026-2027';
+  const siteKey = 'tocqueville';
+
+  const ss = openSiteSheet(anneeLong, siteKey);
+  const sheet = ss.getSheetByName('Paramétrage');
+  if (!sheet) { Logger.log('Onglet Paramétrage introuvable.'); return; }
+
+  const values = sheet.getDataRange().getValues();
+  Logger.log('Nombre de lignes lues dans Paramétrage : ' + values.length);
+
+  let startRow = -1;
+  for (let i = 0; i < values.length; i++) {
+    const cell0 = String(values[i][0] || '').trim().toUpperCase();
+    const cell1 = String(values[i][1] || '').trim().toUpperCase();
+    if (cell0.startsWith('LISTE DES FOURNISSEURS') || cell1.startsWith('LISTE DES FOURNISSEURS')) {
+      startRow = i + 1;
+      Logger.log('Marqueur trouvé à la ligne ' + (i + 1) + ' | A="' + values[i][0] + '" | B="' + values[i][1] + '"');
+      break;
+    }
+  }
+  if (startRow === -1) {
+    Logger.log('❌ Marqueur "LISTE DES FOURNISSEURS" introuvable dans toute la feuille.');
+    return;
+  }
+
+  Logger.log('--- 5 lignes suivant le marqueur ---');
+  for (let i = startRow; i < Math.min(startRow + 5, values.length); i++) {
+    Logger.log('Ligne ' + (i + 1) + ' | A="' + values[i][0] + '" | B="' + values[i][1] + '"');
+  }
+
+  const resultat = listFournisseurs(anneeLong, siteKey);
+  Logger.log('Résultat listFournisseurs() : ' + resultat.length + ' fournisseur(s) — ' + JSON.stringify(resultat.slice(0, 5)));
+}
+
+function diagnosticListProduits() {
+  const anneeLong = '2026-2027';
+  const siteKey = 'tocqueville';
+  const fournisseur = 'Jeulin';
+
+  const ss = openSiteSheet(anneeLong, siteKey);
+  let sheet = ss.getSheetByName(fournisseur);
+  if (!sheet) {
+    const normalize = s => String(s).replace(/^\s*\d+\s*-?\s*/, '').replace(/\s+/g, '').toLowerCase();
+    const target = normalize(fournisseur);
+    sheet = ss.getSheets().find(s => normalize(s.getName()) === target);
+  }
+  if (!sheet) { Logger.log('Onglet introuvable.'); return; }
+
+  Logger.log('Onglet trouvé : ' + sheet.getName());
+  const values = sheet.getDataRange().getValues();
+  Logger.log('Nombre de lignes brutes lues : ' + values.length);
+
+  const normalizeText = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  const IGNORED = ['designation produit', 'total ht', 'dont consommable', 'dont investissement',
+                   'dont maintenance', 'dont projet-pta', 'dont abonnement', 'dont epreuves'];
+
+  values.slice(0, 10).forEach((row, i) => {
+    const designationRaw = String(row[0] || '').trim();
+    let raison = 'GARDÉE';
+    if (!designationRaw) raison = 'filtrée : désignation vide';
+    else {
+      const designationNorm = normalizeText(designationRaw);
+      if (IGNORED.indexOf(designationNorm) !== -1) raison = 'filtrée : dans IGNORED ("' + designationNorm + '")';
+      else if (designationRaw.startsWith('(')) raison = 'filtrée : commence par (';
+      else if (designationNorm.includes('texte bleu')) raison = 'filtrée : contient "texte bleu"';
+      else if (designationRaw.includes(' — ') || designationRaw.includes(' - Saint') || designationRaw.includes(' - Tocqueville')) raison = 'filtrée : tiret cadratin ou " - Saint/Tocqueville"';
+      else if (normalizeText(String(row[2] || '')) === 'reference') raison = 'filtrée : colonne Référence = "reference"';
+    }
+    Logger.log('Ligne ' + (i + 1) + ' | Désignation="' + designationRaw + '" | ' + raison);
+  });
+}
+
 function listProduits(anneeLong, siteKey, fournisseur) {
   const ss = openSiteSheet(anneeLong, siteKey);
   let sheet = ss.getSheetByName(fournisseur);
@@ -873,12 +1652,40 @@ function listProduits(anneeLong, siteKey, fournisseur) {
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // retire les accents
     .trim().toLowerCase();
 
+  // ── Lecture dynamique des colonnes par nom d'en-tête (ligne 3) ──
+  // Certains onglets ont une structure légèrement différente des autres
+  // (ex: une colonne "Prix TTC" en plus sur Amazone) — plutôt que de
+  // supposer une position fixe pour chaque colonne, on cherche le bon
+  // index à partir du texte de l'en-tête, une fois par appel. Ça évite
+  // tout décalage silencieux si l'ordre/nombre de colonnes varie.
+  const ligneEntete = values[2] || []; // ligne 3 (index 2) = en-têtes
+  const trouverColonne = (nomAttendu) => {
+    const cible = normalizeText(nomAttendu);
+    for (let i = 0; i < ligneEntete.length; i++) {
+      if (normalizeText(ligneEntete[i]) === cible) return i;
+    }
+    return -1;
+  };
+
+  const idxDesignation = trouverColonne('Désignation produit');
+  const idxCdt = trouverColonne('Cdt');
+  const idxQuantite = trouverColonne('Quantité');
+  const idxReference = trouverColonne('Référence');
+  const idxPrixHT = trouverColonne('Prix HT');
+  const idxPrixTTC = trouverColonne('Prix TTC');
+  const idxCodeAnalytique = trouverColonne('Code analytique');
+  const idxTypeDepense = trouverColonne('Type de dépense');
+
+  if (idxDesignation === -1) {
+    throw new Error('Colonne "Désignation produit" introuvable sur l\'onglet "' + sheet.getName() + '" (ligne d\'en-tête inattendue).');
+  }
+
   const IGNORED = ['designation produit', 'total ht', 'dont consommable', 'dont investissement',
                    'dont maintenance', 'dont projet-pta', 'dont abonnement', 'dont epreuves'];
 
   const items = [];
   values.forEach(row => {
-    const designationRaw = String(row[0] || '').trim();
+    const designationRaw = String(row[idxDesignation] || '').trim();
     if (!designationRaw) return;
 
     const designationNorm = normalizeText(designationRaw);
@@ -886,21 +1693,23 @@ function listProduits(anneeLong, siteKey, fournisseur) {
     if (designationRaw.startsWith('(')) return;                     // ligne légende type "(Désignation complète)"
     if (designationNorm.includes('texte bleu')) return;             // ligne légende code couleur
     if (designationRaw.includes(' — ') || designationRaw.includes(' - Saint') || designationRaw.includes(' - Tocqueville')) return; // ligne titre "FOURNISSEUR — Site"
-    if (normalizeText(String(row[2] || '')) === 'reference') return; // sécurité : ligne d'en-tête détectée via la colonne Référence
+    if (idxReference !== -1 && normalizeText(String(row[idxReference] || '')) === 'reference') return; // sécurité : ligne d'en-tête
 
-    const designation = designationRaw;
-
-    const prixUnitaire = parseFloat(row[3]) || 0;
-    const quantitePrev = parseFloat(row[8]) || 1;
+    // On garde HT et TTC disponibles partout (l'association ne récupère
+    // pas la TVA, donc les deux montants ont un intérêt réel à afficher).
+    const quantitePrev = idxQuantite !== -1 ? (parseFloat(row[idxQuantite]) || 1) : 1;
+    const prixUnitaireHT = idxPrixHT !== -1 ? (parseFloat(row[idxPrixHT]) || 0) : 0;
+    const prixUnitaireTTC = idxPrixTTC !== -1 ? (parseFloat(row[idxPrixTTC]) || 0) : 0;
 
     items.push({
-      designation: designation,
-      cdt: String(row[1] || ''),
-      reference: String(row[2] || ''),
-      prixUnitaire: prixUnitaire,
+      designation: designationRaw,
+      cdt: idxCdt !== -1 ? String(row[idxCdt] || '') : '',
+      reference: idxReference !== -1 ? String(row[idxReference] || '') : '',
+      prixUnitaireHT: prixUnitaireHT,
+      prixUnitaireTTC: prixUnitaireTTC,
       quantitePrev: quantitePrev,
-      codeAnalytique: String(row[11] || ''),
-      typeDepense: String(row[12] || '')
+      codeAnalytique: idxCodeAnalytique !== -1 ? String(row[idxCodeAnalytique] || '') : '',
+      typeDepense: idxTypeDepense !== -1 ? String(row[idxTypeDepense] || '') : ''
     });
   });
   return items;

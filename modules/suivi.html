@@ -103,6 +103,12 @@
                         <div class="input-group" style="flex:0 0 auto;">
                             <button class="btn-refresh" onclick="loadOrders()">🔄 Actualiser</button>
                         </div>
+                        <div class="input-group" style="flex:0 0 auto;">
+                            <button class="btn-refresh" onclick="window.open('https://drive.google.com/drive/folders/1fWe1gGdAeVRGLD0_O5uk2bbWWrL4orsY', '_blank')">📁 Drive Saint-Pierre</button>
+                        </div>
+                        <div class="input-group" style="flex:0 0 auto;">
+                            <button class="btn-refresh" onclick="window.open('https://drive.google.com/drive/folders/11IXuVLtdYMx8k0JEEckDeRdVBBpMM70u', '_blank')">📁 Drive Tocqueville</button>
+                        </div>
                     </div>
 
                     <div id="loadingOrders" class="loading-message" style="display:none;">
@@ -128,11 +134,11 @@
     <script src="../assets/common.js"></script>
     <script>
         // ⚠️ Doit être identique à celle utilisée dans commandes.html
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwBPaODcFsS12FsL1oBaGAfgY3OYs1Px_ynh8Y5R35MBp3gFIcL0jVOO-6RevFI-xPI/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxTYegcG6Y5xg5GEmN_HhwDJcQy7vN9JfBih1UJ5au-S6f2U8f8X1rZhl9Yh316hVon_Q/exec';
 
         const STATUT_INFO = {
-            'À commander':   { classe: 'a-commander', badge: 'À commander' },
-            'Commandé':      { classe: 'commande',    badge: 'Commandé' },
+            'À commander':   { classe: 'a-commander', badge: 'À envoyer' },
+            'Commandé':      { classe: 'commande',    badge: 'Envoyé' },
             'Reçu partiel':  { classe: 'recu-partiel', badge: 'Reçu partiel' },
             'Reçu complet':  { classe: 'recu-complet', badge: 'Reçu complet' },
             'Annulée':       { classe: 'annulee',      badge: '🚫 Annulée' }
@@ -209,6 +215,22 @@
             }
         }
 
+        // Libellés affichés à l'écran ≠ valeurs réellement stockées dans
+        // le Sheet (on garde les valeurs internes historiques pour ne
+        // rien casser, seul l'affichage change).
+        const LIBELLE_AFFICHE = {
+            'À commander': 'À envoyer',
+            'Commandé': 'Envoyé',
+            'Reçu partiel': 'Reçu partiel',
+            'Reçu complet': 'Reçu complet'
+        };
+        const VALEUR_INTERNE = {
+            'À envoyer': 'À commander',
+            'Envoyé': 'Commandé',
+            'Reçu partiel': 'Reçu partiel',
+            'Reçu complet': 'Reçu complet'
+        };
+
         function renderStatusControls() {
             const order = currentOrders.find(o => o.orderId === openOrderId);
             const container = document.getElementById('statusControls');
@@ -219,22 +241,55 @@
                 return;
             }
 
-            let boutons = '';
-            if (order.statut === 'À commander') {
-                boutons += `<button class="btn-refresh" onclick="markAsCommande('${order.orderId}')">📤 Marquer "Commandé"</button>`;
-            }
-            boutons += `<button class="btn-refresh" style="color:#991b1b;border-color:#991b1b;" onclick="cancelOrderUI('${order.orderId}')">🗑️ Annuler cette commande</button>`;
-            container.innerHTML = boutons;
+            const statutAffiche = LIBELLE_AFFICHE[order.statut] || order.statut;
+            const options = ['À envoyer', 'Envoyé', 'Reçu partiel', 'Reçu complet'];
+
+            container.innerHTML = `
+                <div class="input-group" style="min-width:200px;">
+                    <label style="font-size:12px;">État de la commande</label>
+                    <select id="statutSelect" onchange="onStatutChange('${order.orderId}', this.value)">
+                        ${options.map(o => `<option value="${o}" ${o === statutAffiche ? 'selected' : ''}>${o}</option>`).join('')}
+                    </select>
+                </div>
+                <button class="btn-refresh" style="color:#991b1b;border-color:#991b1b;align-self:flex-end;" onclick="cancelOrderUI('${order.orderId}')">🗑️ Annuler cette commande</button>
+            `;
         }
 
-        async function markAsCommande(orderId) {
+        async function onStatutChange(orderId, nouveauLibelle) {
+            const order = currentOrders.find(o => o.orderId === orderId);
+            const statutActuelAffiche = LIBELLE_AFFICHE[order.statut] || order.statut;
+
+            if (nouveauLibelle === 'Reçu partiel') {
+                alert('"Reçu partiel" se calcule automatiquement selon les items cochés ci-dessous — coche/décoche les items reçus dans la liste pour obtenir cet état, plutôt que de le choisir directement ici.');
+                renderStatusControls(); // remet le menu sur la vraie valeur actuelle
+                return;
+            }
+
+            if (nouveauLibelle === 'Reçu complet') {
+                if (!confirm('Marquer TOUS les items de cette commande comme reçus ?')) { renderStatusControls(); return; }
+                try {
+                    const res = await callAppsScript(APPS_SCRIPT_URL, 'markAllReceived', { orderId });
+                    if (!res.success) throw new Error(res.error || 'Erreur script');
+                    await loadOrders();
+                    await openDetail(orderId);
+                } catch (err) {
+                    alert('❌ Erreur : ' + err.message);
+                    renderStatusControls();
+                }
+                return;
+            }
+
+            // "À envoyer" ou "Envoyé" — changement direct dans les deux sens
             try {
-                const res = await callAppsScript(APPS_SCRIPT_URL, 'setOrderStatus', { orderId, nouveauStatut: 'Commandé' });
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'setOrderStatus', {
+                    orderId, nouveauStatut: VALEUR_INTERNE[nouveauLibelle]
+                });
                 if (!res.success) throw new Error(res.error || 'Erreur script');
                 await loadOrders();
                 await openDetail(orderId);
             } catch (err) {
                 alert('❌ Erreur : ' + err.message);
+                renderStatusControls();
             }
         }
 

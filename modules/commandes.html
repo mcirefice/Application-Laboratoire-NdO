@@ -426,7 +426,7 @@
                 if (checked && qty > 0) {
                     const item = currentItems[idx];
                     items.push({
-                        designation: item.designation, reference: item.reference,
+                        designation: item.designation, reference: item.reference, cdt: item.cdt,
                         quantite: qty, prixUnitaireHT: item.prixUnitaireHT, prixUnitaireTTC: item.prixUnitaireTTC,
                         typeDepense: item.typeDepense, codeAnalytique: item.codeAnalytique
                     });

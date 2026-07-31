@@ -182,10 +182,11 @@
             container.innerHTML = currentOrders.map(o => {
                 const info = STATUT_INFO[o.statut] || { classe: 'a-commander', badge: o.statut || '—' };
                 const dateStr = o.dateCreation ? new Date(o.dateCreation).toLocaleDateString('fr-FR') : '';
+                const signeIcone = o.signatureDdfpt === 'Signé' ? '🖊️✅' : '🖊️⏳';
                 return `
                     <div class="order-card statut-${info.classe}" onclick="openDetail('${o.orderId}')">
                         <div class="order-card-top">
-                            <span class="order-id">${o.orderId}</span>
+                            <span class="order-id">${o.orderId} <span title="${o.signatureDdfpt === 'Signé' ? 'Signé par le DDFPT' : 'En attente signature DDFPT'}">${signeIcone}</span></span>
                             <span class="order-badge badge-${info.classe}">${info.badge}</span>
                         </div>
                         <div class="order-meta">${o.fournisseur} · ${o.site === 'tocqueville' ? 'Tocqueville' : 'Saint-Pierre'} · ${dateStr} · ${o.nbItems} item(s) · Créé par ${o.creePar || '—'}</div>
@@ -243,6 +244,22 @@
 
             const statutAffiche = LIBELLE_AFFICHE[order.statut] || order.statut;
             const options = ['À envoyer', 'Envoyé', 'Reçu partiel', 'Reçu complet'];
+            const estSignee = order.signatureDdfpt === 'Signé';
+            const utilisateurActuel = localStorage.getItem('loggedUser') || '';
+            const estDdfpt = utilisateurActuel === 'm.cirefice';
+
+            let blocSignature = `
+                <div class="input-group" style="min-width:180px;">
+                    <label style="font-size:12px;">Signature DDFPT</label>
+                    <div style="padding:8px 12px;border-radius:8px;font-size:13px;font-weight:700;text-align:center;
+                                background:${estSignee ? '#d1fae5' : '#fef3c7'};color:${estSignee ? '#065f46' : '#92400e'};">
+                        ${estSignee ? '✅ Signé par le DDFPT' : '⏳ En attente signature DDFPT'}
+                    </div>
+                </div>`;
+            if (!estSignee && estDdfpt) {
+                blocSignature += `
+                <button class="btn-refresh" style="align-self:flex-end;" onclick="signOrderUI('${order.orderId}')">🖊️ Signer cette commande</button>`;
+            }
 
             container.innerHTML = `
                 <div class="input-group" style="min-width:200px;">
@@ -251,8 +268,23 @@
                         ${options.map(o => `<option value="${o}" ${o === statutAffiche ? 'selected' : ''}>${o}</option>`).join('')}
                     </select>
                 </div>
+                ${blocSignature}
                 <button class="btn-refresh" style="color:#991b1b;border-color:#991b1b;align-self:flex-end;" onclick="cancelOrderUI('${order.orderId}')">🗑️ Annuler cette commande</button>
             `;
+        }
+
+        async function signOrderUI(orderId) {
+            if (!confirm(`Confirmer la signature de la commande ${orderId} ?\n\n"Accord pour commande" + ta signature seront ajoutés en bas du document, de façon définitive.`)) return;
+            const demandePar = localStorage.getItem('loggedUser') || '';
+            try {
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'signOrder', { orderId, demandePar });
+                if (!res.success) throw new Error(res.error || 'Erreur script');
+                alert('✅ Commande signée.');
+                await loadOrders();
+                await openDetail(orderId);
+            } catch (err) {
+                alert('❌ Erreur : ' + err.message);
+            }
         }
 
         async function onStatutChange(orderId, nouveauLibelle) {

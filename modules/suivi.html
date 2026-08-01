@@ -134,7 +134,7 @@
     <script src="../assets/common.js"></script>
     <script>
         // ⚠️ Doit être identique à celle utilisée dans commandes.html
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxxq6XgHcxOtNWkM2K63WFbu1_4tj4ME6zpqjzldNNSUiDiRxkQKPuypL9wNKAYDZGhGw/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnTBQEXumPckAL-pN71viVjeCR26My5O7FByZndk6anHlliLtyxazuEZV06klo_w8yAg/exec';
 
         const STATUT_INFO = {
             'À commander':   { classe: 'a-commander', badge: 'À envoyer' },
@@ -269,6 +269,7 @@
                     </select>
                 </div>
                 ${blocSignature}
+                <button class="btn-refresh" onclick="regenererDocUI('${order.orderId}')">🔄 Régénérer le document</button>
                 <button class="btn-refresh" style="color:#991b1b;border-color:#991b1b;align-self:flex-end;" onclick="cancelOrderUI('${order.orderId}')">🗑️ Annuler cette commande</button>
             `;
         }
@@ -322,6 +323,20 @@
             } catch (err) {
                 alert('❌ Erreur : ' + err.message);
                 renderStatusControls();
+            }
+        }
+
+        async function regenererDocUI(orderId) {
+            if (!confirm(`Régénérer le document de ${orderId} à partir des items actuels du registre ?\n\nL'ancien document sera mis à la corbeille et remplacé par un nouveau, à jour.`)) return;
+            try {
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'regenererDoc', { orderId });
+                if (!res.success) throw new Error(res.error || 'Erreur script');
+                alert(`✅ Document régénéré (${res.data.nbItems} items, ${res.data.totalTTC.toFixed(2)} € TTC).`);
+                window.open(res.data.docUrl, '_blank');
+                await loadOrders();
+                await openDetail(orderId);
+            } catch (err) {
+                alert('❌ Erreur : ' + err.message);
             }
         }
 

@@ -107,6 +107,11 @@
                     <div id="cmdEmpty" class="cmd-empty">Sélectionne un site puis un fournisseur pour afficher ses produits.</div>
 
                     <div id="cmdTableWrap" style="display:none;overflow-x:auto;">
+                        <div style="display:flex;gap:16px;margin-bottom:10px;font-size:13px;color:#555;flex-wrap:wrap;">
+                            <span><span style="display:inline-block;width:14px;height:14px;background:#fef9c3;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>Rien commandé</span>
+                            <span><span style="display:inline-block;width:14px;height:14px;background:#fed7aa;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>Partiellement commandé</span>
+                            <span><span style="display:inline-block;width:14px;height:14px;background:#d1fae5;border-radius:3px;vertical-align:middle;margin-right:4px;"></span>Totalement couvert</span>
+                        </div>
                         <table class="cmd-table">
                             <thead>
                                 <tr>
@@ -359,19 +364,34 @@
 
         function renderTable() {
             const tbody = document.getElementById('cmdTableBody');
-            tbody.innerHTML = currentItems.map((item, idx) => `
-                <tr data-idx="${idx}">
+            tbody.innerHTML = currentItems.map((item, idx) => {
+                let styleLigne, puce, sousTexte = '';
+                if (item.quantiteDejaCommandee <= 0) {
+                    styleLigne = 'background:#fef9c3;'; // jaune : rien commandé
+                    puce = '';
+                } else if (item.quantiteRestante <= 0) {
+                    styleLigne = 'background:#d1fae5;'; // vert : totalement couvert
+                    puce = '✅ ';
+                    sousTexte = `<div style="font-size:11px;color:#065f46;">${item.quantiteDejaCommandee} déjà commandé(s)</div>`;
+                } else {
+                    styleLigne = 'background:#fed7aa;'; // orange : partiellement commandé
+                    puce = '🟠 ';
+                    sousTexte = `<div style="font-size:11px;color:#9a3412;">${item.quantiteDejaCommandee} déjà commandé(s), ${item.quantiteRestante} restant(s)</div>`;
+                }
+                const qtyParDefaut = item.quantiteRestante > 0 ? item.quantiteRestante : item.quantitePrev;
+                return `
+                <tr data-idx="${idx}" style="${styleLigne}">
                     <td><input type="checkbox" class="item-check" onchange="updateSummary()"></td>
-                    <td>${escapeHtml(item.designation)}</td>
+                    <td>${puce}${escapeHtml(item.designation)}${sousTexte}</td>
                     <td>${formatReference(item.reference)}</td>
                     <td>${item.prixUnitaireHT.toFixed(2)} €</td>
                     <td>${item.prixUnitaireTTC.toFixed(2)} €</td>
                     <td>${item.quantitePrev}</td>
-                    <td><input type="number" class="item-qty" min="0" step="1" value="${item.quantitePrev}" onchange="updateSummary()"></td>
-                    <td class="item-total-ht">${(item.prixUnitaireHT * item.quantitePrev).toFixed(2)} €</td>
-                    <td class="item-total-ttc">${(item.prixUnitaireTTC * item.quantitePrev).toFixed(2)} €</td>
-                </tr>
-            `).join('');
+                    <td><input type="number" class="item-qty" min="0" step="1" value="${qtyParDefaut}" onchange="updateSummary()"></td>
+                    <td class="item-total-ht">${(item.prixUnitaireHT * qtyParDefaut).toFixed(2)} €</td>
+                    <td class="item-total-ttc">${(item.prixUnitaireTTC * qtyParDefaut).toFixed(2)} €</td>
+                </tr>`;
+            }).join('');
             document.getElementById('cmdTableWrap').style.display = 'block';
             document.getElementById('cmdSummary').style.display = 'flex';
             document.getElementById('checkAll').checked = false;

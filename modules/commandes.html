@@ -160,7 +160,7 @@
         };
 
         // ⚠️ À remplacer par l'URL /exec obtenue après déploiement de Code_Commandes.gs
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwq_EfB31o6Jd10H8I5Ez33nDG3JW9yvwoWPnaAnN_a9QHz9tbY0WCBLEWso9r4w2kkBg/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwluL0nT-d7bamXT3T059NZPQjJzzoNQ4D4hHMxkTPp-B-FnsiIdHC9r0XnXigrc_7_pQ/exec';
 
         let selectedAnnee = '2025-2026'; // année active par défaut au chargement
         let currentFournisseurs = []; // liste des noms d'onglets fournisseurs pour le site sélectionné
@@ -201,7 +201,8 @@
                 });
                 if (!res.success) throw new Error(res.error || 'Erreur script');
                 alert(`✅ Fournisseur créé : ${res.data.onglet}`);
-                onSiteChange(); // recharge la liste des fournisseurs
+                localStorage.removeItem('fournisseurs_' + selectedAnnee + '_' + siteKey);
+                onSiteChange(); // recharge la liste des fournisseurs (cache invalidé, donc vraiment à jour)
             } catch (err) {
                 alert('❌ Erreur : ' + err.message);
             }
@@ -220,7 +221,8 @@
                 });
                 if (!res.success) throw new Error(res.error || 'Erreur script');
                 alert(`✅ Fournisseur supprimé : ${res.data.supprime}`);
-                onSiteChange(); // recharge la liste des fournisseurs
+                localStorage.removeItem('fournisseurs_' + selectedAnnee + '_' + siteKey);
+                onSiteChange(); // recharge la liste des fournisseurs (cache invalidé, donc vraiment à jour)
             } catch (err) {
                 alert('❌ Erreur : ' + err.message);
             }
@@ -304,6 +306,8 @@
             }
         }
 
+        const DUREE_CACHE_FOURNISSEURS_MS = 4 * 60 * 60 * 1000; // 4 heures
+
         async function onSiteChange() {
             const siteKey = document.getElementById('siteSelect').value;
             const fSelect = document.getElementById('fournisseurSelect');
@@ -315,21 +319,42 @@
             }
             fSelect.disabled = true;
             fSelect.innerHTML = '<option value="">Chargement des fournisseurs...</option>';
+
+            const cleCache = 'fournisseurs_' + selectedAnnee + '_' + siteKey;
+            try {
+                const enCache = localStorage.getItem(cleCache);
+                if (enCache) {
+                    const donnees = JSON.parse(enCache);
+                    if (Date.now() - donnees.horodatage < DUREE_CACHE_FOURNISSEURS_MS) {
+                        currentFournisseurs = donnees.liste;
+                        remplirSelectFournisseurs(fSelect);
+                        return; // pas d'appel serveur, la liste vient du cache local
+                    }
+                }
+            } catch (e) { /* cache invalide, on ignore et on recharge normalement */ }
+
             try {
                 const res = await callAppsScript(APPS_SCRIPT_URL, 'listFournisseurs', { anneeLong: selectedAnnee, site: siteKey });
                 if (!res.success) throw new Error(res.error || 'Erreur script');
                 currentFournisseurs = res.data;
-                if (currentFournisseurs.length === 0) {
-                    fSelect.innerHTML = '<option value="">Aucun fournisseur trouvé</option>';
-                    return;
-                }
-                fSelect.innerHTML = '<option value="">— Choisir un fournisseur —</option>' +
-                    currentFournisseurs.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
-                fSelect.disabled = false;
+                try {
+                    localStorage.setItem(cleCache, JSON.stringify({ horodatage: Date.now(), liste: currentFournisseurs }));
+                } catch (e) { /* stockage plein ou indisponible, pas grave */ }
+                remplirSelectFournisseurs(fSelect);
             } catch (err) {
                 console.error(err);
                 fSelect.innerHTML = '<option value="">Erreur de chargement</option>';
             }
+        }
+
+        function remplirSelectFournisseurs(fSelect) {
+            if (currentFournisseurs.length === 0) {
+                fSelect.innerHTML = '<option value="">Aucun fournisseur trouvé</option>';
+                return;
+            }
+            fSelect.innerHTML = '<option value="">— Choisir un fournisseur —</option>' +
+                currentFournisseurs.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
+            fSelect.disabled = false;
         }
 
         async function onFournisseurChange() {

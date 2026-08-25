@@ -3,184 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laboratoire - Budget & Suivi</title>
+    <title>Laboratoire - Budget</title>
+    <link rel="stylesheet" href="../assets/common.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+        .budget-toolbar {
+            display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;
+            background: #f8f9fa; padding: 20px; border-radius: 15px; margin-bottom: 25px;
         }
-
-        .dashboard-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            animation: slideIn 0.5s ease-out;
+        .budget-toolbar select { padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; }
+        .budget-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px; margin-bottom: 30px;
         }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-30px); }
-            to   { opacity: 1; transform: translateY(0); }
+        .budget-card {
+            background: white; border-radius: 15px; padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-
-        .header {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            padding: 20px 25px;
-            margin-bottom: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+        .budget-card h3 { color: #667eea; margin-bottom: 14px; font-size: 17px; text-align: center; }
+        .budget-card canvas { max-height: 320px; }
+        .budget-total {
+            text-align: center; font-size: 22px; font-weight: 800; color: #333; margin-top: 10px;
         }
-
-        .header-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 15px;
+        .evolution-card {
+            background: white; border-radius: 15px; padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
         }
-
-        .header-left, .header-right { display: flex; align-items: center; flex-shrink: 0; }
-        .header-left img, .header-right img { height: 55px; object-fit: contain; }
-
-        .header-center {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            flex: 1;
-        }
-
-        .header-center h1 { color: #667eea; font-size: 26px; margin: 0; }
-        .header-center p { color: #666; font-size: 13px; margin: 4px 0 0 0; }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            padding: 10px 0 2px;
-            border-top: 1px solid #f0f0f0;
-            flex-wrap: wrap;
-        }
-
-        .user-badge {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 7px 18px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .btn-logout {
-            background: #fff;
-            border: 2px solid #667eea;
-            color: #667eea;
-            padding: 7px 18px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-logout:hover { background: #667eea; color: white; transform: translateY(-2px); }
-
-        .tabs-container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-        }
-
-        .tabs-nav {
-            display: flex;
-            background: #f8f9fa;
-            border-bottom: 2px solid #e0e0e0;
-            flex-wrap: wrap;
-        }
-
-        .tab-button {
-            flex: 1;
-            min-width: 130px;
-            padding: 20px 10px;
-            background: none;
-            border: none;
-            color: #666;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .tab-button:hover { background: rgba(102, 126, 234, 0.1); color: #667eea; }
-        .tab-button.active { color: #667eea; background: white; }
-
-        .tab-button.active::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; right: 0;
-            height: 3px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .tab-content { padding: 40px; min-height: 400px; }
-
-        .info-card {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-            padding: 40px 30px;
-            border-radius: 15px;
-            text-align: center;
-            border: 2px dashed #667eea;
-        }
-
-        .info-card .icon { font-size: 48px; margin-bottom: 10px; }
-        .info-card h2 { color: #667eea; font-size: 24px; margin-bottom: 14px; }
-        .info-card p { color: #666; font-size: 16px; line-height: 1.7; max-width: 560px; margin: 0 auto 8px; }
-
-        .coming-soon {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 6px 18px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-top: 18px;
-        }
-
-        .next-steps {
-            text-align: left;
-            max-width: 520px;
-            margin: 24px auto 0;
-            background: white;
-            border-radius: 12px;
-            padding: 18px 22px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.08);
-        }
-        .next-steps h3 { color: #667eea; font-size: 14px; margin-bottom: 10px; }
-        .next-steps ul { padding-left: 20px; color: #444; font-size: 14px; line-height: 1.8; }
-
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            .header { padding: 15px; gap: 10px; }
-            .header-left img, .header-right img { height: 40px; }
-            .header-center h1 { font-size: 18px; }
-            .header-center p { font-size: 11px; }
-            .tabs-nav { flex-direction: column; }
-            .tab-button { border-bottom: 1px solid #e0e0e0; padding: 14px; font-size: 14px; }
-            .tab-content { padding: 15px; }
-        }
-
-        @media (max-width: 400px) {
-            .header-center h1 { font-size: 15px; }
-            .header-left img, .header-right img { height: 32px; }
-            .user-badge, .btn-logout { font-size: 13px; padding: 6px 14px; }
+        .evolution-card h3 { color: #667eea; margin-bottom: 16px; font-size: 18px; }
+        .note-verif {
+            background: #fffbeb; border: 2px solid #fbbf24; border-radius: 10px;
+            padding: 14px 18px; font-size: 13px; color: #92400e; margin-bottom: 20px;
         }
     </style>
 </head>
@@ -188,18 +40,11 @@
     <div class="dashboard-container">
         <div class="header">
             <div class="header-top">
-                <div class="header-left">
-                    <img src="../logo-notre-dame.png" alt="Notre-Dame Les Oiseaux">
-                </div>
+                <div class="header-left"><img src="../logo-notre-dame.png" alt="Notre-Dame Les Oiseaux"></div>
                 <div class="header-center">
-                    <div>
-                        <h1>🔬 Laboratoire</h1>
-                        <p>Tableau de bord - Gestion d'équipe</p>
-                    </div>
+                    <div><h1>🔬 Laboratoire</h1><p>Tableau de bord - Gestion d'équipe</p></div>
                 </div>
-                <div class="header-right">
-                    <img src="../logo-ndo-sup.png" alt="NDO Sup">
-                </div>
+                <div class="header-right"><img src="../logo-ndo-sup.png" alt="NDO Sup"></div>
             </div>
             <div class="user-info">
                 <span class="user-badge" id="userBadge">Utilisateur</span>
@@ -208,50 +53,178 @@
         </div>
 
         <div class="tabs-container">
-            <div class="tabs-nav">
-                <button class="tab-button" onclick="window.location.href='dechets.html'">♻️ Gestion des Déchets</button>
-                <button class="tab-button" onclick="window.location.href='tp.html'">🧪 Préparation TP</button>
-                <button class="tab-button" onclick="window.location.href='preparations.html'">📚 Préparations Particulières</button>
-                <button class="tab-button" onclick="window.location.href='optique.html'">🔭 Conversions Optiques</button>
-                <button class="tab-button " onclick="window.location.href='maintenance.html'">🛠️ Maintenance</button>
-                <button class="tab-button " onclick="window.location.href='commandes.html'">📦 Commandes</button>
-                <button class="tab-button active" onclick="window.location.href='budget.html'">📊 Budget &amp; Suivi</button>
-            </div>
+            <div class="tabs-nav" id="tabsNav"></div>
 
             <div class="tab-content">
-                <div class="info-card">
-                    <div class="icon">📊</div>
-                    <h2>Budget & Suivi</h2>
-                    <p>Lecture et visualisation du budget du laboratoire : prévisionnel vs réel, par fournisseur et par type de dépense.</p>
-                    <span class="coming-soon">🚧 En construction</span>
-                    <div class="next-steps">
-                        <h3>À venir sur cette page :</h3>
-                        <ul>
-                            <li>Jauge de budget global engagé / restant</li>
-                            <li>Répartition par fournisseur et par type de dépense</li>
-                            <li>Comparatif prévisionnel vs réel sur plusieurs années</li>
-                            <li>Suivi des commandes par statut</li>
-                        </ul>
+                <div class="content-section active" id="sectionBudget">
+                    <h2 style="color:#667eea;margin-bottom:20px;text-align:center;">📊 Budget Prévisionnel</h2>
+
+                    <div class="note-verif">
+                        ⚠️ Module en cours de construction — les montants du prévisionnel de l'année en cours sont lus automatiquement depuis "Récapitulatif", à vérifier une fois testé. Le stock n'est pas encore intégré.
+                    </div>
+
+                    <div class="budget-toolbar">
+                        <div class="input-group">
+                            <label>Année scolaire</label>
+                            <select id="anneeSelect" onchange="chargerToutLeBudget()">
+                                <option value="2026-2027" selected>2026-2027</option>
+                            </select>
+                        </div>
+                        <div class="input-group" style="flex:0 0 auto;">
+                            <button class="btn-refresh" onclick="chargerToutLeBudget()">🔄 Actualiser</button>
+                        </div>
+                        <div class="input-group" style="flex:0 0 auto;">
+                            <button class="btn-refresh" onclick="window.print()">🖨️ Imprimer / PDF</button>
+                        </div>
+                    </div>
+
+                    <div id="loadingBudget" class="loading-message">
+                        <div class="spinner"></div><p>Chargement du budget...</p>
+                    </div>
+
+                    <div id="budgetContent" style="display:none;">
+                        <div class="budget-grid">
+                            <div class="budget-card">
+                                <h3>Tocqueville — Répartition prévisionnelle</h3>
+                                <canvas id="chartTocqueville"></canvas>
+                                <div class="budget-total" id="totalTocqueville">— €</div>
+                            </div>
+                            <div class="budget-card">
+                                <h3>Saint-Pierre — Répartition prévisionnelle</h3>
+                                <canvas id="chartSaintPierre"></canvas>
+                                <div class="budget-total" id="totalSaintPierre">— €</div>
+                            </div>
+                        </div>
+
+                        <div class="evolution-card">
+                            <h3>📈 Évolution du budget global par site (historique)</h3>
+                            <canvas id="chartEvolution" style="max-height:400px;"></canvas>
+                        </div>
+
+                        <div class="evolution-card">
+                            <h3>📦 Montant des stocks</h3>
+                            <p style="color:#999;text-align:center;padding:20px;">À intégrer — en attente des données fournies par le DDFPT.</p>
+                        </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
 
+    <script src="../assets/nav.config.js"></script>
+    <script src="../assets/common.js"></script>
     <script>
-        window.addEventListener('load', function() {
-            const loggedUser = localStorage.getItem('loggedUser');
-            if (!loggedUser) { window.location.href = '../login.html'; return; }
-            document.getElementById('userBadge').textContent = loggedUser;
+        // ⚠️ URL du script Code_Budget.gs — séparé de Code_Commandes.gs.
+        const APPS_SCRIPT_URL_BUDGET = 'https://script.google.com/macros/s/AKfycbzLPwIdngxJwZEFMseRKp5psY0J9xCap_SOWArt628la8MiTNRQr7w2CVBz-8-rnWbamQ/exec';
+
+        const COULEURS_TYPE = {
+            'consommable': '#667eea', 'investissement': '#f59e0b',
+            'maintenance': '#10b981', 'projet-pta': '#ec4899',
+            'abonnement': '#06b6d4', 'epreuves': '#8b5cf6', 'epreuve': '#8b5cf6'
+        };
+
+        window.addEventListener('load', function () {
+            const user = initModulePage('budget');
+            if (!user) return;
+            chargerToutLeBudget();
         });
 
-        function logout() {
-            if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
-                localStorage.removeItem('loggedUser');
-                localStorage.removeItem('loginTime');
-                window.location.href = '../login.html';
+        async function chargerToutLeBudget() {
+            document.getElementById('budgetContent').style.display = 'none';
+            document.getElementById('loadingBudget').style.display = 'block';
+            const anneeLong = document.getElementById('anneeSelect').value;
+
+            try {
+                const [prevTQ, prevSP, historique] = await Promise.all([
+                    callAppsScript(APPS_SCRIPT_URL_BUDGET, 'getBudgetPrevisionnel', { anneeLong, site: 'tocqueville' }),
+                    callAppsScript(APPS_SCRIPT_URL_BUDGET, 'getBudgetPrevisionnel', { anneeLong, site: 'saintpierre' }),
+                    callAppsScript(APPS_SCRIPT_URL_BUDGET, 'getHistoriqueBudget', {})
+                ]);
+
+                if (!prevTQ.success) throw new Error('Tocqueville : ' + prevTQ.error);
+                if (!prevSP.success) throw new Error('Saint-Pierre : ' + prevSP.error);
+                if (!historique.success) throw new Error('Historique : ' + historique.error);
+
+                document.getElementById('loadingBudget').style.display = 'none';
+                document.getElementById('budgetContent').style.display = 'block';
+
+                dessinerCamembert('chartTocqueville', 'totalTocqueville', prevTQ.data);
+                dessinerCamembert('chartSaintPierre', 'totalSaintPierre', prevSP.data);
+                dessinerEvolution(historique.data);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loadingBudget').innerHTML = '<p style="color:#c33;">❌ Erreur : ' + err.message + '</p>';
             }
+        }
+
+        let graphiques = {}; // pour détruire proprement avant de redessiner
+
+        function dessinerCamembert(idCanvas, idTotal, parType) {
+            const labels = Object.keys(parType);
+            const valeurs = labels.map(l => parType[l]);
+            const total = valeurs.reduce((a, b) => a + b, 0);
+            document.getElementById(idTotal).textContent = total.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+
+            if (graphiques[idCanvas]) graphiques[idCanvas].destroy();
+            const ctx = document.getElementById(idCanvas).getContext('2d');
+            graphiques[idCanvas] = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: valeurs,
+                        backgroundColor: labels.map(l => COULEURS_TYPE[l.toLowerCase()] || '#94a3b8')
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ctx.label + ' : ' + ctx.parsed.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function dessinerEvolution(donnees) {
+            // Regroupe par année × site (toutes catégories confondues) le
+            // total (Consommable + Investissement + InvestiExceptionnel + Maintenance).
+            const parAnneeSite = {}; // "annee|site" -> total
+            donnees.forEach(d => {
+                const cle = d.annee + '|' + d.site;
+                const total = (d.consommable || 0) + (d.investissement || 0) + (d.investiExceptionnel || 0) + (d.maintenance || 0);
+                parAnneeSite[cle] = (parAnneeSite[cle] || 0) + total;
+            });
+
+            const annees = [...new Set(donnees.map(d => d.annee))].sort();
+            const totauxTocqueville = annees.map(a => parAnneeSite[a + '|tocqueville'] || 0);
+            const totauxSaintPierre = annees.map(a => parAnneeSite[a + '|saintpierre'] || 0);
+
+            if (graphiques['chartEvolution']) graphiques['chartEvolution'].destroy();
+            const ctx = document.getElementById('chartEvolution').getContext('2d');
+            graphiques['chartEvolution'] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: annees,
+                    datasets: [
+                        { label: 'Tocqueville', data: totauxTocqueville, borderColor: '#667eea', backgroundColor: '#667eea', tension: 0.2 },
+                        { label: 'Saint-Pierre', data: totauxSaintPierre, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.2 }
+                    ]
+                },
+                options: {
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ctx.dataset.label + ' : ' + ctx.parsed.y.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+                            }
+                        }
+                    },
+                    scales: { y: { ticks: { callback: v => v.toLocaleString('fr-FR') + ' €' } } }
+                }
+            });
         }
     </script>
 </body>

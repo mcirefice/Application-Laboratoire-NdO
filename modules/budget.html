@@ -6,6 +6,7 @@
     <title>Laboratoire - Budget</title>
     <link rel="stylesheet" href="../assets/common.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
     <style>
         .budget-toolbar {
             display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;
@@ -97,8 +98,13 @@
                         </div>
 
                         <div class="evolution-card">
-                            <h3>📈 Évolution du budget global par site (historique)</h3>
-                            <canvas id="chartEvolution" style="max-height:400px;"></canvas>
+                            <h3>📈 Évolution du budget global — Tocqueville</h3>
+                            <canvas id="chartEvolutionTQ" style="max-height:380px;"></canvas>
+                        </div>
+
+                        <div class="evolution-card">
+                            <h3>📈 Évolution du budget global — Saint-Pierre</h3>
+                            <canvas id="chartEvolutionSP" style="max-height:380px;"></canvas>
                         </div>
 
                         <div class="evolution-card">
@@ -122,6 +128,8 @@
             'maintenance': '#10b981', 'projet-pta': '#ec4899',
             'abonnement': '#06b6d4', 'epreuves': '#8b5cf6', 'epreuve': '#8b5cf6'
         };
+
+        Chart.register(ChartDataLabels);
 
         window.addEventListener('load', function () {
             const user = initModulePage('budget');
@@ -148,9 +156,10 @@
                 document.getElementById('loadingBudget').style.display = 'none';
                 document.getElementById('budgetContent').style.display = 'block';
 
-                dessinerCamembert('chartTocqueville', 'totalTocqueville', prevTQ.data);
-                dessinerCamembert('chartSaintPierre', 'totalSaintPierre', prevSP.data);
-                dessinerEvolution(historique.data);
+                dessinerHistogramme('chartTocqueville', 'totalTocqueville', prevTQ.data);
+                dessinerHistogramme('chartSaintPierre', 'totalSaintPierre', prevSP.data);
+                dessinerEvolutionParSite('chartEvolutionTQ', historique.data.filter(d => d.site === 'tocqueville'), 'Tocqueville', '#667eea');
+                dessinerEvolutionParSite('chartEvolutionSP', historique.data.filter(d => d.site === 'saintpierre'), 'Saint-Pierre', '#f59e0b');
             } catch (err) {
                 console.error(err);
                 document.getElementById('loadingBudget').innerHTML = '<p style="color:#c33;">❌ Erreur : ' + err.message + '</p>';
@@ -159,7 +168,7 @@
 
         let graphiques = {}; // pour détruire proprement avant de redessiner
 
-        function dessinerCamembert(idCanvas, idTotal, parType) {
+        function dessinerHistogramme(idCanvas, idTotal, parType) {
             const labels = Object.keys(parType);
             const valeurs = labels.map(l => parType[l]);
             const total = valeurs.reduce((a, b) => a + b, 0);
@@ -168,7 +177,7 @@
             if (graphiques[idCanvas]) graphiques[idCanvas].destroy();
             const ctx = document.getElementById(idCanvas).getContext('2d');
             graphiques[idCanvas] = new Chart(ctx, {
-                type: 'pie',
+                type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [{
@@ -178,47 +187,65 @@
                 },
                 options: {
                     plugins: {
-                        legend: { position: 'bottom' },
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'end', align: 'top', color: '#333', font: { weight: 'bold', size: 11 },
+                            formatter: v => v.toLocaleString('fr-FR') + ' €'
+                        },
                         tooltip: {
                             callbacks: {
-                                label: ctx => ctx.label + ' : ' + ctx.parsed.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+                                label: ctx => ctx.label + ' : ' + ctx.parsed.y.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
                             }
                         }
-                    }
+                    },
+                    scales: { y: { ticks: { callback: v => v.toLocaleString('fr-FR') + ' €' } } }
                 }
             });
         }
 
-        function dessinerEvolution(donnees) {
-            // Regroupe par année × site (toutes catégories confondues) le
-            // total (Consommable + Investissement + InvestiExceptionnel + Maintenance).
-            const parAnneeSite = {}; // "annee|site" -> total
-            donnees.forEach(d => {
-                const cle = d.annee + '|' + d.site;
+        // Même palette pour les deux sites, par type de dépense — assure
+        // que "Consommable" a la même couleur sur Tocqueville et Saint-Pierre.
+        function dessinerEvolutionParSite(idCanvas, donneesSite, nomSite, couleur) {
+            const parAnnee = {};
+            donneesSite.forEach(d => {
                 const total = (d.consommable || 0) + (d.investissement || 0) + (d.investiExceptionnel || 0) + (d.maintenance || 0);
-                parAnneeSite[cle] = (parAnneeSite[cle] || 0) + total;
+                parAnnee[d.annee] = (parAnnee[d.annee] || 0) + total;
             });
+            const annees = Object.keys(parAnnee).sort();
+            const totaux = annees.map(a => parAnnee[a]);
+            const moyenne = totaux.length > 0 ? totaux.reduce((a, b) => a + b, 0) / totaux.length : 0;
 
-            const annees = [...new Set(donnees.map(d => d.annee))].sort();
-            const totauxTocqueville = annees.map(a => parAnneeSite[a + '|tocqueville'] || 0);
-            const totauxSaintPierre = annees.map(a => parAnneeSite[a + '|saintpierre'] || 0);
-
-            if (graphiques['chartEvolution']) graphiques['chartEvolution'].destroy();
-            const ctx = document.getElementById('chartEvolution').getContext('2d');
-            graphiques['chartEvolution'] = new Chart(ctx, {
+            if (graphiques[idCanvas]) graphiques[idCanvas].destroy();
+            const ctx = document.getElementById(idCanvas).getContext('2d');
+            graphiques[idCanvas] = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: annees,
                     datasets: [
-                        { label: 'Tocqueville', data: totauxTocqueville, borderColor: '#667eea', backgroundColor: '#667eea', tension: 0.2 },
-                        { label: 'Saint-Pierre', data: totauxSaintPierre, borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0.2 }
+                        {
+                            label: nomSite, data: totaux, borderColor: couleur, backgroundColor: couleur,
+                            tension: 0.2, pointRadius: 5,
+                            datalabels: {
+                                display: true, anchor: 'end', align: 'top', color: '#333',
+                                font: { weight: 'bold', size: 11 },
+                                formatter: v => v.toLocaleString('fr-FR') + ' €'
+                            }
+                        },
+                        {
+                            label: 'Moyenne (' + moyenne.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' €)',
+                            data: annees.map(() => moyenne),
+                            borderColor: '#dc2626', borderDash: [8, 4], borderWidth: 2,
+                            pointRadius: 0, fill: false,
+                            datalabels: { display: false }
+                        }
                     ]
                 },
                 options: {
                     plugins: {
+                        legend: { position: 'bottom' },
                         tooltip: {
                             callbacks: {
-                                label: ctx => ctx.dataset.label + ' : ' + ctx.parsed.y.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+                                label: ctx => ctx.dataset.label + (ctx.dataset.label.startsWith('Moyenne') ? '' : ' : ' + ctx.parsed.y.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }))
                             }
                         }
                     },

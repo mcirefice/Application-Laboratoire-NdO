@@ -35,6 +35,20 @@
             background: #fffbeb; border: 2px solid #fbbf24; border-radius: 10px;
             padding: 14px 18px; font-size: 13px; color: #92400e; margin-bottom: 20px;
         }
+
+        .titre-section-site {
+            color: #333; font-size: 20px; font-weight: 800; margin: 30px 0 16px;
+            padding-bottom: 8px; border-bottom: 3px solid #667eea;
+        }
+        .site-section:first-of-type .titre-section-site { margin-top: 0; }
+
+        @media print {
+            .no-print, .header, .tabs-nav, .budget-toolbar, .note-verif { display: none !important; }
+            .tabs-container, .tab-content { box-shadow: none !important; padding: 0 !important; }
+            .page-break { page-break-before: always; }
+            .budget-card, .evolution-card { box-shadow: none !important; border: 1px solid #ddd; }
+            body { padding: 0 !important; }
+        }
     </style>
 </head>
 <body>
@@ -84,30 +98,42 @@
                     </div>
 
                     <div id="budgetContent" style="display:none;">
-                        <div class="budget-grid">
+
+                        <div class="site-section">
+                            <h2 class="titre-section-site" id="titreSectionTQ"></h2>
                             <div class="budget-card">
-                                <h3>Tocqueville — Répartition prévisionnelle</h3>
+                                <h3>Répartition prévisionnelle</h3>
                                 <canvas id="chartTocqueville"></canvas>
                                 <div class="budget-total" id="totalTocqueville">— €</div>
                             </div>
-                            <div class="budget-card">
-                                <h3>Saint-Pierre — Répartition prévisionnelle</h3>
-                                <canvas id="chartSaintPierre"></canvas>
-                                <div class="budget-total" id="totalSaintPierre">— €</div>
+                            <div class="evolution-card">
+                                <h3>📈 Évolution du budget de fonctionnement (Consommable + Maintenance)</h3>
+                                <canvas id="chartEvolutionTQFonct" style="max-height:380px;"></canvas>
+                            </div>
+                            <div class="evolution-card">
+                                <h3>📈 Évolution des investissements</h3>
+                                <canvas id="chartEvolutionTQInvest" style="max-height:380px;"></canvas>
                             </div>
                         </div>
 
-                        <div class="evolution-card">
-                            <h3>📈 Évolution du budget global — Tocqueville</h3>
-                            <canvas id="chartEvolutionTQ" style="max-height:380px;"></canvas>
+                        <div class="site-section page-break">
+                            <h2 class="titre-section-site" id="titreSectionSP"></h2>
+                            <div class="budget-card">
+                                <h3>Répartition prévisionnelle</h3>
+                                <canvas id="chartSaintPierre"></canvas>
+                                <div class="budget-total" id="totalSaintPierre">— €</div>
+                            </div>
+                            <div class="evolution-card">
+                                <h3>📈 Évolution du budget de fonctionnement (Consommable + Maintenance)</h3>
+                                <canvas id="chartEvolutionSPFonct" style="max-height:380px;"></canvas>
+                            </div>
+                            <div class="evolution-card">
+                                <h3>📈 Évolution des investissements</h3>
+                                <canvas id="chartEvolutionSPInvest" style="max-height:380px;"></canvas>
+                            </div>
                         </div>
 
-                        <div class="evolution-card">
-                            <h3>📈 Évolution du budget global — Saint-Pierre</h3>
-                            <canvas id="chartEvolutionSP" style="max-height:380px;"></canvas>
-                        </div>
-
-                        <div class="evolution-card">
+                        <div class="evolution-card no-print">
                             <h3>📦 Montant des stocks</h3>
                             <p style="color:#999;text-align:center;padding:20px;">À intégrer — en attente des données fournies par le DDFPT.</p>
                         </div>
@@ -156,10 +182,21 @@
                 document.getElementById('loadingBudget').style.display = 'none';
                 document.getElementById('budgetContent').style.display = 'block';
 
+                document.getElementById('titreSectionTQ').textContent = 'Budgets antérieurs et prévisionnel de l\'année ' + anneeLong + ' - Tocqueville';
+                document.getElementById('titreSectionSP').textContent = 'Budgets antérieurs et prévisionnel de l\'année ' + anneeLong + ' - Saint-Pierre';
+
                 dessinerHistogramme('chartTocqueville', 'totalTocqueville', prevTQ.data);
                 dessinerHistogramme('chartSaintPierre', 'totalSaintPierre', prevSP.data);
-                dessinerEvolutionParSite('chartEvolutionTQ', historique.data.filter(d => d.site === 'tocqueville'), 'Tocqueville', '#667eea');
-                dessinerEvolutionParSite('chartEvolutionSP', historique.data.filter(d => d.site === 'saintpierre'), 'Saint-Pierre', '#f59e0b');
+
+                const donneesTQ = historique.data.filter(d => d.site === 'tocqueville');
+                const donneesSP = historique.data.filter(d => d.site === 'saintpierre');
+                // Fonctionnement et investissements séparés : les investissements
+                // (souvent ponctuels et beaucoup plus élevés certaines années)
+                // écrasaient sinon la lecture de la tendance du fonctionnement courant.
+                dessinerEvolutionParSite('chartEvolutionTQFonct', donneesTQ, 'Tocqueville - Fonctionnement', '#10b981', ['consommable', 'maintenance']);
+                dessinerEvolutionParSite('chartEvolutionTQInvest', donneesTQ, 'Tocqueville - Investissements', '#f59e0b', ['investissement', 'investiExceptionnel']);
+                dessinerEvolutionParSite('chartEvolutionSPFonct', donneesSP, 'Saint-Pierre - Fonctionnement', '#10b981', ['consommable', 'maintenance']);
+                dessinerEvolutionParSite('chartEvolutionSPInvest', donneesSP, 'Saint-Pierre - Investissements', '#f59e0b', ['investissement', 'investiExceptionnel']);
             } catch (err) {
                 console.error(err);
                 document.getElementById('loadingBudget').innerHTML = '<p style="color:#c33;">❌ Erreur : ' + err.message + '</p>';
@@ -203,12 +240,16 @@
             });
         }
 
-        // Même palette pour les deux sites, par type de dépense — assure
-        // que "Consommable" a la même couleur sur Tocqueville et Saint-Pierre.
-        function dessinerEvolutionParSite(idCanvas, donneesSite, nomSite, couleur) {
+        // Le paramètre "champs" détermine ce qui est sommé (fonctionnement :
+        // consommable+maintenance, ou investissements : investissement+
+        // investiExceptionnel) — sépare les deux pour ne pas laisser les
+        // investissements (ponctuels, parfois très élevés) écraser la
+        // lecture de la tendance du fonctionnement courant.
+        function dessinerEvolutionParSite(idCanvas, donneesSite, nomSite, couleur, champs) {
             const parAnnee = {};
             donneesSite.forEach(d => {
-                const total = (d.consommable || 0) + (d.investissement || 0) + (d.investiExceptionnel || 0) + (d.maintenance || 0);
+                let total = 0;
+                champs.forEach(c => { total += (d[c] || 0); });
                 parAnnee[d.annee] = (parAnnee[d.annee] || 0) + total;
             });
             const annees = Object.keys(parAnnee).sort();

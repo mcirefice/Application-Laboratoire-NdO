@@ -211,6 +211,8 @@
             const total = valeurs.reduce((a, b) => a + b, 0);
             document.getElementById(idTotal).textContent = total.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
 
+            const maxValeur = valeurs.length > 0 ? Math.max(...valeurs) : 0;
+
             if (graphiques[idCanvas]) graphiques[idCanvas].destroy();
             const ctx = document.getElementById(idCanvas).getContext('2d');
             graphiques[idCanvas] = new Chart(ctx, {
@@ -235,7 +237,9 @@
                             }
                         }
                     },
-                    scales: { y: { ticks: { callback: v => v.toLocaleString('fr-FR') + ' €' } } }
+                    // +15% au-dessus de la plus grande valeur, pour laisser
+                    // la place à l'étiquette du montant sans qu'elle soit coupée.
+                    scales: { y: { suggestedMax: maxValeur * 1.15, ticks: { callback: v => v.toLocaleString('fr-FR') + ' €' } } }
                 }
             });
         }
@@ -255,6 +259,7 @@
             const annees = Object.keys(parAnnee).sort();
             const totaux = annees.map(a => parAnnee[a]);
             const moyenne = totaux.length > 0 ? totaux.reduce((a, b) => a + b, 0) / totaux.length : 0;
+            const maxValeur = totaux.length > 0 ? Math.max(...totaux, moyenne) : 0;
 
             if (graphiques[idCanvas]) graphiques[idCanvas].destroy();
             const ctx = document.getElementById(idCanvas).getContext('2d');
@@ -290,7 +295,9 @@
                             }
                         }
                     },
-                    scales: { y: { ticks: { callback: v => v.toLocaleString('fr-FR') + ' €' } } }
+                    // +15% au-dessus de la plus grande valeur (point ou
+                    // moyenne), pour laisser la place aux étiquettes de montant.
+                    scales: { y: { suggestedMax: maxValeur * 1.15, ticks: { callback: v => v.toLocaleString('fr-FR') + ' €' } } }
                 }
             });
         }

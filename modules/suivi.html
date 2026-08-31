@@ -58,6 +58,28 @@
         .status-attente { background: #fef3c7; color: #92400e; }
         .status-recu { background: #d1fae5; color: #065f46; }
         .empty-msg { text-align: center; color: #999; padding: 30px; }
+
+        table.reception-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        table.reception-table th {
+            background: #f8f9fa; padding: 10px; text-align: left; color: #667eea;
+            border-bottom: 2px solid #e0e0e0; font-size: 13px;
+        }
+        table.reception-table td { padding: 8px 10px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        table.reception-table tr.deja-recue { background: #f0fdf4; opacity: 0.7; }
+        table.reception-table input[type="number"] {
+            width: 90px; padding: 6px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 13px;
+        }
+        .frais-livraison-zone {
+            display: flex; align-items: center; gap: 12px; background: #f8f9fa;
+            padding: 14px 18px; border-radius: 10px; margin: 16px 0; flex-wrap: wrap;
+        }
+        .frais-livraison-zone input { padding: 8px 12px; border: 2px solid #e0e0e0; border-radius: 8px; width: 120px; }
+        .btn-valider-lot {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;
+            border: none; padding: 12px 24px; border-radius: 10px; font-size: 14px;
+            font-weight: 700; cursor: pointer; margin-top: 14px;
+        }
+        .btn-valider-lot:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -134,7 +156,7 @@
     <script src="../assets/common.js"></script>
     <script>
         // ⚠️ Doit être identique à celle utilisée dans commandes.html
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwluL0nT-d7bamXT3T059NZPQjJzzoNQ4D4hHMxkTPp-B-FnsiIdHC9r0XnXigrc_7_pQ/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzN9YBMnnmzllal6JdNWcSWZ25qm2ZrfmXpAZkgRrNCmsoqoHjMdMBRPR8hjja2Wu731A/exec';
 
         const STATUT_INFO = {
             'À commander':   { classe: 'a-commander', badge: 'À envoyer' },
@@ -261,6 +283,16 @@
                 <button class="btn-refresh" style="align-self:flex-end;" onclick="signOrderUI('${order.orderId}')">🖊️ Signer cette commande</button>`;
             }
 
+            const fraisLivraison = order.fraisLivraisonCumules || 0;
+            const blocFrais = fraisLivraison > 0
+                ? `<div class="input-group" style="min-width:150px;">
+                       <label style="font-size:12px;">🚚 Frais de livraison cumulés</label>
+                       <div style="padding:8px 12px;border-radius:8px;font-size:13px;font-weight:700;text-align:center;background:#f1f5f9;color:#475569;">
+                           ${fraisLivraison.toFixed(2)} €
+                       </div>
+                   </div>`
+                : '';
+
             container.innerHTML = `
                 <div class="input-group" style="min-width:200px;">
                     <label style="font-size:12px;">État de la commande</label>
@@ -269,6 +301,7 @@
                     </select>
                 </div>
                 ${blocSignature}
+                ${blocFrais}
                 <button class="btn-refresh" onclick="regenererDocUI('${order.orderId}')">🔄 Régénérer le document</button>
                 <button class="btn-refresh" style="color:#991b1b;border-color:#991b1b;align-self:flex-end;" onclick="cancelOrderUI('${order.orderId}')">🗑️ Annuler cette commande</button>
             `;
@@ -358,39 +391,83 @@
                 container.innerHTML = '<p class="empty-msg">Aucun item trouvé.</p>';
                 return;
             }
-            container.innerHTML = items.map(it => {
+            const enAttente = items.filter(it => it.statutReception !== 'Reçu');
+
+            let html = `
+                <table class="reception-table">
+                    <thead>
+                        <tr>
+                            <th style="width:32px;"><input type="checkbox" id="checkAllReception" onclick="toggleAllReception(this)"></th>
+                            <th>Désignation</th>
+                            <th>Qté</th>
+                            <th>Prix HT réel (€)</th>
+                            <th>Prix TTC réel (€)</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            items.forEach(it => {
                 const recu = it.statutReception === 'Reçu';
-                return `
-                    <div class="detail-item" data-row="${it.rowIndex}">
-                        <div class="detail-item-info">
-                            <div class="detail-item-name">${escapeHtml(it.designation)}</div>
-                            <div class="detail-item-sub">Réf: ${escapeHtml(it.reference || '—')} · Qté: ${it.quantite} · ${(it.prixUnitaireHT || 0).toFixed(2)} € HT / ${(it.prixUnitaireTTC || 0).toFixed(2)} € TTC par unité</div>
-                        </div>
-                        <button class="detail-item-status ${recu ? 'status-recu' : 'status-attente'}"
-                                onclick="toggleItemStatus(${it.rowIndex}, ${recu})">
-                            ${recu ? '✅ Reçu' : '⏳ En attente'}
-                        </button>
-                    </div>`;
-            }).join('');
+                html += `
+                        <tr data-row="${it.rowIndex}" class="${recu ? 'deja-recue' : ''}">
+                            <td>${recu ? '' : `<input type="checkbox" class="reception-check">`}</td>
+                            <td>
+                                <div style="font-weight:600;">${escapeHtml(it.designation)}</div>
+                                <div style="font-size:12px;color:#888;">Réf: ${escapeHtml(it.reference || '—')}</div>
+                            </td>
+                            <td>${it.quantite}</td>
+                            <td><input type="number" step="0.01" class="reception-prix-ht" value="${(it.prixUnitaireHT || 0).toFixed(2)}" ${recu ? 'disabled' : ''}></td>
+                            <td><input type="number" step="0.01" class="reception-prix-ttc" value="${(it.prixUnitaireTTC || 0).toFixed(2)}" ${recu ? 'disabled' : ''}></td>
+                            <td>${recu ? '<span class="detail-item-status status-recu">✅ Reçu</span>' : '<span class="detail-item-status status-attente">⏳ En attente</span>'}</td>
+                        </tr>`;
+            });
+            html += `</tbody></table>`;
+
+            if (enAttente.length > 0) {
+                html += `
+                    <div class="frais-livraison-zone">
+                        <label style="font-weight:600;font-size:13px;">🚚 Frais de livraison de cette réception (€, optionnel)</label>
+                        <input type="number" step="0.01" id="fraisLivraisonInput" placeholder="0.00">
+                        <span style="font-size:12px;color:#888;">Cumulés avec les frais déjà enregistrés si la commande arrive en plusieurs fois.</span>
+                    </div>
+                    <button class="btn-valider-lot" id="btnValiderLot" onclick="validerReceptionLotUI()">✅ Valider la réception des items cochés</button>`;
+            }
+            container.innerHTML = html;
         }
 
-        async function toggleItemStatus(rowIndex, etaitRecu) {
-            const nouveauStatut = etaitRecu ? 'En attente' : 'Reçu';
-            const btn = document.querySelector(`.detail-item[data-row="${rowIndex}"] .detail-item-status`);
-            if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+        function toggleAllReception(checkbox) {
+            document.querySelectorAll('.reception-check').forEach(c => { c.checked = checkbox.checked; });
+        }
+
+        async function validerReceptionLotUI() {
+            const lignesCochees = [...document.querySelectorAll('table.reception-table tbody tr')]
+                .filter(tr => tr.querySelector('.reception-check') && tr.querySelector('.reception-check').checked);
+
+            if (lignesCochees.length === 0) { alert('Coche au moins un item à valider.'); return; }
+
+            const items = lignesCochees.map(tr => ({
+                rowIndex: parseInt(tr.dataset.row, 10),
+                prixHT: tr.querySelector('.reception-prix-ht').value,
+                prixTTC: tr.querySelector('.reception-prix-ttc').value
+            }));
+            const fraisLivraison = document.getElementById('fraisLivraisonInput')?.value || 0;
+
+            const btn = document.getElementById('btnValiderLot');
+            btn.disabled = true;
+            btn.textContent = '⏳ Validation en cours...';
 
             try {
-                const res = await callAppsScript(APPS_SCRIPT_URL, 'updateItemStatus', { rowIndex, nouveauStatut });
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'validerReceptionLot', {
+                    orderId: openOrderId, items: items, fraisLivraison: fraisLivraison
+                });
                 if (!res.success) throw new Error(res.error || 'Erreur script');
-                // Recharge le détail (statut à jour) et la liste (badge global à jour)
-                await openDetail(openOrderId);
                 await loadOrders();
-                // Rouvre le panneau détail après le rechargement de la liste (loadOrders le ferme)
                 await openDetail(openOrderId);
             } catch (err) {
                 console.error(err);
                 alert('❌ Erreur : ' + err.message);
-                if (btn) { btn.disabled = false; }
+                btn.disabled = false;
+                btn.textContent = '✅ Valider la réception des items cochés';
             }
         }
 

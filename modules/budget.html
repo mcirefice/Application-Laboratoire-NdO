@@ -89,7 +89,10 @@
                             <button class="btn-refresh" onclick="chargerToutLeBudget()">🔄 Actualiser</button>
                         </div>
                         <div class="input-group" style="flex:0 0 auto;">
-                            <button class="btn-refresh" onclick="window.print()">🖨️ Imprimer / PDF</button>
+                            <button class="btn-refresh" onclick="imprimerSite('tocqueville')">🖨️ Imprimer Tocqueville</button>
+                        </div>
+                        <div class="input-group" style="flex:0 0 auto;">
+                            <button class="btn-refresh" onclick="imprimerSite('saintpierre')">🖨️ Imprimer Saint-Pierre</button>
                         </div>
                     </div>
 
@@ -99,7 +102,13 @@
 
                     <div id="budgetContent" style="display:none;">
 
-                        <div class="site-section">
+                        <div class="evolution-card" id="carteDechets">
+                            <h3>♻️ Déchets chimiques — coût d'enlèvement (année en cours)</h3>
+                            <p style="font-size:12px;color:#888;margin-bottom:12px;">⚠️ Donnée commune aux deux sites (pas encore séparée par technicien/site).</p>
+                            <canvas id="chartDechets" style="max-height:300px;"></canvas>
+                        </div>
+
+                        <div class="site-section" id="sectionTocqueville">
                             <h2 class="titre-section-site" id="titreSectionTQ"></h2>
                             <div class="budget-card">
                                 <h3>Répartition prévisionnelle</h3>
@@ -116,7 +125,7 @@
                             </div>
                         </div>
 
-                        <div class="site-section page-break">
+                        <div class="site-section page-break" id="sectionSaintPierre">
                             <h2 class="titre-section-site" id="titreSectionSP"></h2>
                             <div class="budget-card">
                                 <h3>Répartition prévisionnelle</h3>
@@ -147,7 +156,7 @@
     <script src="../assets/common.js"></script>
     <script>
         // ⚠️ URL du script Code_Budget.gs — séparé de Code_Commandes.gs.
-        const APPS_SCRIPT_URL_BUDGET = 'https://script.google.com/macros/s/AKfycbxLkxHPLP0UQVz7YdquFKFmluIhkWPRkZ6c7I-Q4lkCT16L0bTSj6yGSnx1xRMfNhxmxQ/exec';
+        const APPS_SCRIPT_URL_BUDGET = 'https://script.google.com/macros/s/AKfycbwZyWxES1CyCLS7TCmiC-FYmwFrjCrxtXKh4_x_UsB7VqboLpJWAiSWZelV-zOh8WGZVg/exec';
 
         const COULEURS_TYPE = {
             'consommable': '#667eea', 'investissement': '#f59e0b',
@@ -169,15 +178,17 @@
             const anneeLong = document.getElementById('anneeSelect').value;
 
             try {
-                const [prevTQ, prevSP, historique] = await Promise.all([
+                const [prevTQ, prevSP, historique, dechets] = await Promise.all([
                     callAppsScript(APPS_SCRIPT_URL_BUDGET, 'getBudgetPrevisionnel', { anneeLong, site: 'tocqueville' }),
                     callAppsScript(APPS_SCRIPT_URL_BUDGET, 'getBudgetPrevisionnel', { anneeLong, site: 'saintpierre' }),
-                    callAppsScript(APPS_SCRIPT_URL_BUDGET, 'getHistoriqueBudget', {})
+                    callAppsScript(APPS_SCRIPT_URL_BUDGET, 'getHistoriqueBudget', {}),
+                    callAppsScript(APPS_SCRIPT_URL_BUDGET, 'getBudgetDechets', {})
                 ]);
 
                 if (!prevTQ.success) throw new Error('Tocqueville : ' + prevTQ.error);
                 if (!prevSP.success) throw new Error('Saint-Pierre : ' + prevSP.error);
                 if (!historique.success) throw new Error('Historique : ' + historique.error);
+                if (!dechets.success) throw new Error('Déchets : ' + dechets.error);
 
                 document.getElementById('loadingBudget').style.display = 'none';
                 document.getElementById('budgetContent').style.display = 'block';
@@ -185,18 +196,40 @@
                 document.getElementById('titreSectionTQ').textContent = 'Budgets antérieurs et prévisionnel de l\'année ' + anneeLong + ' - Tocqueville';
                 document.getElementById('titreSectionSP').textContent = 'Budgets antérieurs et prévisionnel de l\'année ' + anneeLong + ' - Saint-Pierre';
 
+                dessinerGraphiqueDechets(dechets.data);
                 dessinerHistogramme('chartTocqueville', 'totalTocqueville', prevTQ.data);
                 dessinerHistogramme('chartSaintPierre', 'totalSaintPierre', prevSP.data);
 
-                const donneesTQ = historique.data.filter(d => d.site === 'tocqueville');
-                const donneesSP = historique.data.filter(d => d.site === 'saintpierre');
+                const donneesTQ = historique.data.filter(d => d.site === 'tocqueville' && d.annee !== anneeLong);
+                const donneesSP = historique.data.filter(d => d.site === 'saintpierre' && d.annee !== anneeLong);
+
+                // Ajoute l'année en cours (prévisionnel) comme dernier point du
+                // graphique d'évolution, pour voir où elle se situe par rapport
+                // à l'historique — pas seulement dans l'histogramme à part.
+                const previsionnelTQ = {
+                    annee: anneeLong, site: 'tocqueville',
+                    consommable: prevTQ.data['consommable'] || 0,
+                    investissement: prevTQ.data['investissement'] || 0,
+                    investiExceptionnel: 0,
+                    maintenance: prevTQ.data['maintenance'] || 0
+                };
+                const previsionnelSP = {
+                    annee: anneeLong, site: 'saintpierre',
+                    consommable: prevSP.data['consommable'] || 0,
+                    investissement: prevSP.data['investissement'] || 0,
+                    investiExceptionnel: 0,
+                    maintenance: prevSP.data['maintenance'] || 0
+                };
+                donneesTQ.push(previsionnelTQ);
+                donneesSP.push(previsionnelSP);
+
                 // Fonctionnement et investissements séparés : les investissements
                 // (souvent ponctuels et beaucoup plus élevés certaines années)
                 // écrasaient sinon la lecture de la tendance du fonctionnement courant.
-                dessinerEvolutionParSite('chartEvolutionTQFonct', donneesTQ, 'Tocqueville - Fonctionnement', '#10b981', ['consommable', 'maintenance']);
-                dessinerEvolutionParSite('chartEvolutionTQInvest', donneesTQ, 'Tocqueville - Investissements', '#f59e0b', ['investissement', 'investiExceptionnel']);
-                dessinerEvolutionParSite('chartEvolutionSPFonct', donneesSP, 'Saint-Pierre - Fonctionnement', '#10b981', ['consommable', 'maintenance']);
-                dessinerEvolutionParSite('chartEvolutionSPInvest', donneesSP, 'Saint-Pierre - Investissements', '#f59e0b', ['investissement', 'investiExceptionnel']);
+                dessinerEvolutionParSite('chartEvolutionTQFonct', donneesTQ, 'Tocqueville - Fonctionnement', '#10b981', ['consommable', 'maintenance'], anneeLong);
+                dessinerEvolutionParSite('chartEvolutionTQInvest', donneesTQ, 'Tocqueville - Investissements', '#f59e0b', ['investissement', 'investiExceptionnel'], anneeLong);
+                dessinerEvolutionParSite('chartEvolutionSPFonct', donneesSP, 'Saint-Pierre - Fonctionnement', '#10b981', ['consommable', 'maintenance'], anneeLong);
+                dessinerEvolutionParSite('chartEvolutionSPInvest', donneesSP, 'Saint-Pierre - Investissements', '#f59e0b', ['investissement', 'investiExceptionnel'], anneeLong);
             } catch (err) {
                 console.error(err);
                 document.getElementById('loadingBudget').innerHTML = '<p style="color:#c33;">❌ Erreur : ' + err.message + '</p>';
@@ -204,6 +237,50 @@
         }
 
         let graphiques = {}; // pour détruire proprement avant de redessiner
+
+        function dessinerGraphiqueDechets(donnees) {
+            const labels = ['DASRI (biologique)', 'Autres déchets (chimique)'];
+            const valeurs = [donnees.dasri, donnees.autresDechets];
+            const couleurs = ['#dc2626', '#64748b'];
+
+            if (graphiques['chartDechets']) graphiques['chartDechets'].destroy();
+            const ctx = document.getElementById('chartDechets').getContext('2d');
+            graphiques['chartDechets'] = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: labels, datasets: [{ data: valeurs, backgroundColor: couleurs }] },
+                options: {
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'end', align: 'right', color: '#333', font: { weight: 'bold', size: 12 },
+                            formatter: v => v.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) + ' €'
+                        },
+                        tooltip: {
+                            callbacks: { label: ctx => ctx.label + ' : ' + ctx.parsed.x.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) }
+                        }
+                    },
+                    scales: { x: { suggestedMax: Math.max(...valeurs) * 1.25, ticks: { callback: v => v.toLocaleString('fr-FR') + ' €' } } }
+                }
+            });
+        }
+
+        // Impression séparée par site : cache l'autre section (et son
+        // titre) avant d'ouvrir la boîte d'impression du navigateur, pour
+        // obtenir deux documents PDF bien distincts plutôt qu'un seul
+        // fichier contenant les deux sites.
+        function imprimerSite(site) {
+            const tq = document.getElementById('sectionTocqueville');
+            const sp = document.getElementById('sectionSaintPierre');
+            const autreSection = site === 'tocqueville' ? sp : tq;
+            const styleOriginal = autreSection.style.display;
+
+            autreSection.style.display = 'none';
+            window.print();
+            // Remet la section masquée en l'état après la boîte d'impression
+            // (window.print() est bloquant tant que la boîte de dialogue est ouverte).
+            autreSection.style.display = styleOriginal;
+        }
 
         function dessinerHistogramme(idCanvas, idTotal, parType) {
             const labels = Object.keys(parType);
@@ -249,7 +326,9 @@
         // investiExceptionnel) — sépare les deux pour ne pas laisser les
         // investissements (ponctuels, parfois très élevés) écraser la
         // lecture de la tendance du fonctionnement courant.
-        function dessinerEvolutionParSite(idCanvas, donneesSite, nomSite, couleur, champs) {
+        // anneeEnCours (optionnel) : dernier point affiché avec un style
+        // distinct ("prévisionnel", pas encore un vrai historique clos).
+        function dessinerEvolutionParSite(idCanvas, donneesSite, nomSite, couleur, champs, anneeEnCours) {
             const parAnnee = {};
             donneesSite.forEach(d => {
                 let total = 0;
@@ -260,17 +339,20 @@
             const totaux = annees.map(a => parAnnee[a]);
             const moyenne = totaux.length > 0 ? totaux.reduce((a, b) => a + b, 0) / totaux.length : 0;
             const maxValeur = totaux.length > 0 ? Math.max(...totaux, moyenne) : 0;
+            const indexCourant = anneeEnCours ? annees.indexOf(anneeEnCours) : -1;
 
             if (graphiques[idCanvas]) graphiques[idCanvas].destroy();
             const ctx = document.getElementById(idCanvas).getContext('2d');
             graphiques[idCanvas] = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: annees,
+                    labels: annees.map(a => a === anneeEnCours ? a + ' (prévi.)' : a),
                     datasets: [
                         {
                             label: nomSite, data: totaux, borderColor: couleur, backgroundColor: couleur,
-                            tension: 0.2, pointRadius: 5,
+                            tension: 0.2,
+                            pointRadius: annees.map((a, i) => i === indexCourant ? 8 : 5),
+                            pointStyle: annees.map((a, i) => i === indexCourant ? 'rectRot' : 'circle'),
                             datalabels: {
                                 display: true, anchor: 'end', align: 'top', color: '#333',
                                 font: { weight: 'bold', size: 11 },
@@ -278,20 +360,28 @@
                             }
                         },
                         {
-                            label: 'Moyenne (' + moyenne.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' €)',
+                            label: 'Moyenne',
                             data: annees.map(() => moyenne),
                             borderColor: '#dc2626', borderDash: [8, 4], borderWidth: 2,
                             pointRadius: 0, fill: false,
-                            datalabels: { display: false }
+                            datalabels: {
+                                // Valeur affichée une seule fois, sur le dernier point de
+                                // la ligne rouge elle-même (pas juste dans la légende).
+                                display: (context) => context.dataIndex === context.dataset.data.length - 1,
+                                align: 'right', anchor: 'center', color: '#dc2626',
+                                font: { weight: 'bold', size: 11 },
+                                formatter: v => 'Moyenne : ' + v.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' €'
+                            }
                         }
                     ]
                 },
                 options: {
+                    layout: { padding: { right: 90 } }, // place pour l'étiquette "Moyenne" à droite
                     plugins: {
                         legend: { position: 'bottom' },
                         tooltip: {
                             callbacks: {
-                                label: ctx => ctx.dataset.label + (ctx.dataset.label.startsWith('Moyenne') ? '' : ' : ' + ctx.parsed.y.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }))
+                                label: ctx => ctx.dataset.label + (ctx.dataset.label === 'Moyenne' ? '' : ' : ' + ctx.parsed.y.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }))
                             }
                         }
                     },

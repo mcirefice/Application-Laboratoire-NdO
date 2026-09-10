@@ -112,6 +112,7 @@
                             <h2 class="titre-section-site" id="titreSectionTQ"></h2>
                             <div class="budget-card">
                                 <h3>Répartition prévisionnelle</h3>
+                                <div id="detailPlieesTQ" style="font-size:12px;color:#666;text-align:center;margin-bottom:10px;"></div>
                                 <canvas id="chartTocqueville"></canvas>
                                 <div class="budget-total" id="totalTocqueville">— €</div>
                             </div>
@@ -129,6 +130,7 @@
                             <h2 class="titre-section-site" id="titreSectionSP"></h2>
                             <div class="budget-card">
                                 <h3>Répartition prévisionnelle</h3>
+                                <div id="detailPlieesSP" style="font-size:12px;color:#666;text-align:center;margin-bottom:10px;"></div>
                                 <canvas id="chartSaintPierre"></canvas>
                                 <div class="budget-total" id="totalSaintPierre">— €</div>
                             </div>
@@ -197,14 +199,16 @@
                 document.getElementById('titreSectionSP').textContent = 'Budgets antérieurs et prévisionnel de l\'année ' + anneeLong + ' - Saint-Pierre';
 
                 dessinerGraphiqueDechets(dechets.data);
-                // Tocqueville n'a pas de catégorie "Épreuves" — on la retire de
-                // son histogramme (Saint-Pierre la garde, elle est pertinente là-bas).
-                const prevTQFiltre = {};
-                Object.keys(prevTQ.data).forEach(k => {
-                    if (k.toLowerCase() !== 'epreuves' && k.toLowerCase() !== 'epreuve') prevTQFiltre[k] = prevTQ.data[k];
-                });
-                dessinerHistogramme('chartTocqueville', 'totalTocqueville', prevTQFiltre);
-                dessinerHistogramme('chartSaintPierre', 'totalSaintPierre', prevSP.data);
+                // Projet-PTA, Abonnement et Épreuves sont repliés dans
+                // Consommable pour simplifier l'histogramme (moins de
+                // barres à lire) — le détail de ce qui est inclus reste
+                // affiché juste au-dessus, pour ne pas perdre l'info.
+                const tqRegroupe = regrouperCategoriesMineures(prevTQ.data);
+                const spRegroupe = regrouperCategoriesMineures(prevSP.data);
+                afficherDetailCategoriesPliees('detailPlieesTQ', tqRegroupe.plieesDetail);
+                afficherDetailCategoriesPliees('detailPlieesSP', spRegroupe.plieesDetail);
+                dessinerHistogramme('chartTocqueville', 'totalTocqueville', tqRegroupe.donnees);
+                dessinerHistogramme('chartSaintPierre', 'totalSaintPierre', spRegroupe.donnees);
 
                 const donneesTQ = historique.data.filter(d => d.site === 'tocqueville' && d.annee !== anneeLong);
                 const donneesSP = historique.data.filter(d => d.site === 'saintpierre' && d.annee !== anneeLong);
@@ -286,6 +290,38 @@
             // Remet la section masquée en l'état après la boîte d'impression
             // (window.print() est bloquant tant que la boîte de dialogue est ouverte).
             autreSection.style.display = styleOriginal;
+        }
+
+        // Projet-PTA, Abonnement et Épreuves sont des montants souvent
+        // petits qui encombraient l'histogramme — on les additionne dans
+        // Consommable, et on garde le détail de ce qui a été replié à part
+        // (pour ne rien cacher, juste alléger le graphique principal).
+        const CATEGORIES_A_PLIER = ['projet-pta', 'abonnement', 'epreuves', 'epreuve'];
+
+        function regrouperCategoriesMineures(parType) {
+            const donnees = {};
+            const plieesDetail = [];
+            let ajoutConsommable = 0;
+
+            Object.keys(parType).forEach(k => {
+                if (CATEGORIES_A_PLIER.includes(k.toLowerCase())) {
+                    if (parType[k] > 0) plieesDetail.push({ label: k, montant: parType[k] });
+                    ajoutConsommable += parType[k];
+                } else {
+                    donnees[k] = parType[k];
+                }
+            });
+            donnees['consommable'] = (donnees['consommable'] || 0) + ajoutConsommable;
+
+            return { donnees, plieesDetail };
+        }
+
+        function afficherDetailCategoriesPliees(idConteneur, plieesDetail) {
+            const conteneur = document.getElementById(idConteneur);
+            if (!conteneur) return;
+            if (plieesDetail.length === 0) { conteneur.innerHTML = ''; return; }
+            conteneur.innerHTML = '<span style="font-weight:600;">Inclus dans Consommable :</span> ' +
+                plieesDetail.map(p => `${p.label.charAt(0).toUpperCase() + p.label.slice(1)} : ${p.montant.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €`).join(' · ');
         }
 
         function dessinerHistogramme(idCanvas, idTotal, parType) {

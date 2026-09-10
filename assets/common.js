@@ -15,6 +15,28 @@ function checkLogin() {
     return loggedUser;
 }
 
+/* Rôle de l'utilisateur connecté : "DDFPT", "Technicien" ou "Lecture
+   seule" (stocké lors de la connexion, cf. login.html). */
+function getLabRole() {
+    return localStorage.getItem('labRole') || 'Technicien';
+}
+
+function isLectureSeule() {
+    return getLabRole() === 'Lecture seule';
+}
+
+/* Masque tous les éléments marqués data-hide-lecture-seule si le
+   compte connecté est en lecture seule — pratique pour cacher d'un
+   coup les boutons de création/modification dans une page. Ne remplace
+   pas la vérification côté serveur (déjà faite dans Code_Commandes.gs),
+   c'est juste pour l'ergonomie (ne pas montrer un bouton qui échouera). */
+function appliquerRestrictionsLectureSeule() {
+    if (!isLectureSeule()) return;
+    document.querySelectorAll('[data-hide-lecture-seule]').forEach(el => {
+        el.style.display = 'none';
+    });
+}
+
 function logout() {
     if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
         localStorage.removeItem('loggedUser');
@@ -112,5 +134,6 @@ function initModulePage(currentModuleId) {
     const user = checkLogin();
     if (!user) return null;
     renderNav(currentModuleId);
+    appliquerRestrictionsLectureSeule();
     return user;
 }

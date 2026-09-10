@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laboratoire - Connexion</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+.login-container {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 40px;
+  width: 100%;
+  max-width: 400px;
+  animation: slideIn 0.5s ease-out;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.logo-section { text-align: center; margin-bottom: 30px; }
+.logo-section h1 { color: #667eea; font-size: 28px; margin-bottom: 5px; }
+.logo-section p { color: #666; font-size: 14px; }
+.form-group { margin-bottom: 25px; }
+.form-group label {
+  display: block;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  background-color: white;
+}
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+.form-group select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 15px center;
+  padding-right: 40px;
+}
+.btn-login {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-login:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+.btn-login:active { transform: translateY(0); }
+.error-message {
+  background: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: none;
+  font-size: 14px;
+  text-align: center;
+}
+.error-message.show {
+  display: block;
+  animation: shake 0.5s ease;
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25%       { transform: translateX(-10px); }
+  75%       { transform: translateX(10px); }
+}
+.info-text {
+  text-align: center;
+  color: #999;
+  font-size: 12px;
+  margin-top: 20px;
+}
+@media (max-width: 480px) {
+  .login-container { padding: 30px 20px; }
+  .logo-section h1 { font-size: 24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="logo-section">
+    <h1>🔬 Laboratoire</h1>
+    <p>Système de gestion d'équipe</p>
+  </div>
+
+  <div id="errorMessage" class="error-message">
+    Nom d'utilisateur ou code incorrect
+  </div>
+
+  <form id="loginForm">
+    <div class="form-group">
+      <label for="username">Nom d'utilisateur</label>
+      <select id="username" name="username" required>
+        <option value="">-- Sélectionnez votre nom --</option>
+        <option value="m.cirefice">m.cirefice</option>
+        <option value="a.abidi">a.abidi</option>
+        <option value="m.steuf">m.steuf</option>
+        <option value="k.ovey">k.ovey</option>
+        <option value="c.druot">c.druot</option>
+        <option value="m.duponchel">m.duponchel</option>
+        <option value="p.parisot">p.parisot</option>
+        <option value="chefetablissement">chefetablissement</option>
+        <option value="comptabilite">comptabilite</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="password">Code d'accès</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        placeholder="Entrez votre code"
+        required
+        autocomplete="current-password"
+      >
+    </div>
+
+    <button type="submit" class="btn-login">Se connecter</button>
+  </form>
+
+  <p class="info-text">Accès réservé aux membres de l'équipe et à l'intendant</p>
+</div>
+
+<script>
+// URL du script Code_Commandes.gs — même déploiement que commandes.html/suivi.html.
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfGX4oJE2sUscTbEdH3vb5rpYhqIg8xuywWamfaRoyUw7EC0dqSGrblDC8LFon0VfO/exec';
+
+const loginForm     = document.getElementById('loginForm');
+const errorMessage  = document.getElementById('errorMessage');
+const usernameInput = document.getElementById('username');
+const passwordInput = document.getElementById('password');
+const submitButton  = loginForm.querySelector('button[type="submit"]');
+
+loginForm.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const username = usernameInput.value;
+  const password = passwordInput.value;
+
+  if (!username) {
+    errorMessage.textContent = "Veuillez sélectionner un nom d'utilisateur";
+    errorMessage.classList.add('show');
+    setTimeout(() => errorMessage.classList.remove('show'), 3000);
+    return;
+  }
+
+  submitButton.disabled = true;
+  submitButton.textContent = 'Connexion...';
+
+  try {
+    // Vérification côté serveur, contre l'onglet "Techniciens" du
+    // registre — le code n'est jamais stocké ni visible dans le code
+    // source de cette page (contrairement à l'ancien système de mots
+    // de passe hashés codés en dur ici).
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'verifierConnexion', identifiant: username, code: password })
+    });
+    const res = await response.json();
+
+    if (!res.success) throw new Error(res.error || 'Identifiant ou code incorrect');
+
+    localStorage.setItem('loggedUser', res.data.identifiant); // clé historique
+    localStorage.setItem('labUser', res.data.identifiant);     // clé utilisée dans commandes/budget
+    localStorage.setItem('labRole', res.data.niveau);           // "DDFPT" / "Technicien" / "Lecture seule"
+    localStorage.setItem('loginTime', new Date().toISOString());
+
+    loginForm.style.opacity = '0';
+    setTimeout(() => { window.location.href = 'modules/dechets.html'; }, 300);
+  } catch (err) {
+    errorMessage.textContent = err.message;
+    errorMessage.classList.add('show');
+    passwordInput.value = '';
+    setTimeout(() => errorMessage.classList.remove('show'), 3000);
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = 'Se connecter';
+  }
+});
+
+// Déjà connecté ?
+window.addEventListener('load', function() {
+  if (localStorage.getItem('loggedUser')) {
+    window.location.href = 'modules/dechets.html';
+  }
+});
+</script>
+
+</body>
+</html>

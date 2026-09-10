@@ -158,7 +158,7 @@
     <script src="../assets/common.js"></script>
     <script>
         // ⚠️ Doit être identique à celle utilisée dans commandes.html
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyx7CpxCT6Dw6p0-X7E9AlAen246teSKyKOTeUjYBaXApL8rRAPpa1X22BxDsU5kcR1lQ/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfGX4oJE2sUscTbEdH3vb5rpYhqIg8xuywWamfaRoyUw7EC0dqSGrblDC8LFon0VfO/exec';
 
         const STATUT_INFO = {
             'À commander':   { classe: 'a-commander', badge: 'À envoyer' },
@@ -305,18 +305,30 @@
                    </div>`
                 : '';
 
+            const estLectureSeule = isLectureSeule();
+
+            const blocEtat = estLectureSeule
+                ? `<div class="input-group" style="min-width:200px;">
+                       <label style="font-size:12px;">État de la commande</label>
+                       <div style="padding:8px 12px;border-radius:8px;font-size:13px;font-weight:700;text-align:center;background:#f1f5f9;color:#475569;">${statutAffiche}</div>
+                   </div>`
+                : `<div class="input-group" style="min-width:200px;">
+                       <label style="font-size:12px;">État de la commande</label>
+                       <select id="statutSelect" onchange="onStatutChange('${order.orderId}', this.value)">
+                           ${options.map(o => `<option value="${o}" ${o === statutAffiche ? 'selected' : ''}>${o}</option>`).join('')}
+                       </select>
+                   </div>`;
+
+            const boutonsAction = estLectureSeule ? '' : `
+                <button class="btn-refresh" onclick="regenererDocUI('${order.orderId}')">🔄 Régénérer le document</button>
+                <button class="btn-refresh" style="color:#991b1b;border-color:#991b1b;align-self:flex-end;" onclick="cancelOrderUI('${order.orderId}')">🗑️ Annuler cette commande</button>`;
+
             container.innerHTML = `
-                <div class="input-group" style="min-width:200px;">
-                    <label style="font-size:12px;">État de la commande</label>
-                    <select id="statutSelect" onchange="onStatutChange('${order.orderId}', this.value)">
-                        ${options.map(o => `<option value="${o}" ${o === statutAffiche ? 'selected' : ''}>${o}</option>`).join('')}
-                    </select>
-                </div>
+                ${blocEtat}
                 ${blocSignature}
                 ${blocFrais}
                 ${blocRemises}
-                <button class="btn-refresh" onclick="regenererDocUI('${order.orderId}')">🔄 Régénérer le document</button>
-                <button class="btn-refresh" style="color:#991b1b;border-color:#991b1b;align-self:flex-end;" onclick="cancelOrderUI('${order.orderId}')">🗑️ Annuler cette commande</button>
+                ${boutonsAction}
             `;
         }
 
@@ -347,7 +359,7 @@
             if (nouveauLibelle === 'Reçu complet') {
                 if (!confirm('Marquer TOUS les items de cette commande comme reçus ?')) { renderStatusControls(); return; }
                 try {
-                    const res = await callAppsScript(APPS_SCRIPT_URL, 'markAllReceived', { orderId });
+                    const res = await callAppsScript(APPS_SCRIPT_URL, 'markAllReceived', { orderId, demandePar: localStorage.getItem('loggedUser') || '' });
                     if (!res.success) throw new Error(res.error || 'Erreur script');
                     await loadOrders();
                     await openDetail(orderId);
@@ -361,7 +373,7 @@
             // "À envoyer" ou "Envoyé" — changement direct dans les deux sens
             try {
                 const res = await callAppsScript(APPS_SCRIPT_URL, 'setOrderStatus', {
-                    orderId, nouveauStatut: VALEUR_INTERNE[nouveauLibelle]
+                    orderId, nouveauStatut: VALEUR_INTERNE[nouveauLibelle], demandePar: localStorage.getItem('loggedUser') || ''
                 });
                 if (!res.success) throw new Error(res.error || 'Erreur script');
                 await loadOrders();
@@ -375,7 +387,7 @@
         async function regenererDocUI(orderId) {
             if (!confirm(`Régénérer le document de ${orderId} à partir des items actuels du registre ?\n\nL'ancien document sera mis à la corbeille et remplacé par un nouveau, à jour.`)) return;
             try {
-                const res = await callAppsScript(APPS_SCRIPT_URL, 'regenererDoc', { orderId });
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'regenererDoc', { orderId, demandePar: localStorage.getItem('loggedUser') || '' });
                 if (!res.success) throw new Error(res.error || 'Erreur script');
                 alert(`✅ Document régénéré (${res.data.nbItems} items, ${res.data.totalTTC.toFixed(2)} € TTC).`);
                 window.open(res.data.docUrl, '_blank');
@@ -389,7 +401,7 @@
         async function cancelOrderUI(orderId) {
             if (!confirm(`Confirmer l'annulation de la commande ${orderId} ?\n\nElle restera visible dans l'historique avec le statut "Annulée", mais ne sera plus modifiable.`)) return;
             try {
-                const res = await callAppsScript(APPS_SCRIPT_URL, 'cancelOrder', { orderId });
+                const res = await callAppsScript(APPS_SCRIPT_URL, 'cancelOrder', { orderId, demandePar: localStorage.getItem('loggedUser') || '' });
                 if (!res.success) throw new Error(res.error || 'Erreur script');
                 await loadOrders();
                 await openDetail(orderId);
@@ -404,6 +416,7 @@
                 container.innerHTML = '<p class="empty-msg">Aucun item trouvé.</p>';
                 return;
             }
+            const estLectureSeule = isLectureSeule();
             // "Rupture stock" reste actionnable (pas verrouillé comme "Reçu")
             // pour pouvoir repasser l'item en "Reçu" plus tard si le
             // fournisseur se réapprovisionne.
@@ -413,12 +426,12 @@
                 <table class="reception-table">
                     <thead>
                         <tr>
-                            <th style="width:32px;"><input type="checkbox" id="checkAllReception" onclick="toggleAllReception(this)"></th>
+                            <th style="width:32px;">${estLectureSeule ? '' : '<input type="checkbox" id="checkAllReception" onclick="toggleAllReception(this)">'}</th>
                             <th>Désignation</th>
                             <th>Qté</th>
                             <th>Prix HT réel (€)</th>
                             <th>Prix TTC réel (€)</th>
-                            <th>Statut à appliquer</th>
+                            <th>Statut${estLectureSeule ? '' : ' à appliquer'}</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -426,10 +439,15 @@
                 const recu = it.statutReception === 'Reçu';
                 const rupture = it.statutReception === 'Rupture stock';
                 const classeLigne = recu ? 'deja-recue' : (rupture ? 'en-rupture' : '');
+                const champsVerrouilles = recu || estLectureSeule;
 
                 let colonneStatut;
                 if (recu) {
                     colonneStatut = '<span class="detail-item-status status-recu">✅ Reçu</span>';
+                } else if (estLectureSeule) {
+                    colonneStatut = rupture
+                        ? '<span class="detail-item-status statut-rupture">🔴 Rupture stock</span>'
+                        : '<span class="detail-item-status status-attente">⏳ En attente</span>';
                 } else {
                     colonneStatut = `
                         <select class="reception-statut-cible">
@@ -441,20 +459,20 @@
 
                 html += `
                         <tr data-row="${it.rowIndex}" class="${classeLigne}">
-                            <td>${recu ? '' : `<input type="checkbox" class="reception-check">`}</td>
+                            <td>${(recu || estLectureSeule) ? '' : `<input type="checkbox" class="reception-check">`}</td>
                             <td>
                                 <div style="font-weight:600;">${escapeHtml(it.designation)}</div>
                                 <div style="font-size:12px;color:#888;">Réf: ${escapeHtml(it.reference || '—')}</div>
                             </td>
                             <td>${it.quantite}</td>
-                            <td><input type="number" step="0.01" class="reception-prix-ht" value="${(it.prixUnitaireHT || 0).toFixed(2)}" ${recu ? 'disabled' : ''}></td>
-                            <td><input type="number" step="0.01" class="reception-prix-ttc" value="${(it.prixUnitaireTTC || 0).toFixed(2)}" ${recu ? 'disabled' : ''}></td>
+                            <td><input type="number" step="0.01" class="reception-prix-ht" value="${(it.prixUnitaireHT || 0).toFixed(2)}" ${champsVerrouilles ? 'disabled' : ''}></td>
+                            <td><input type="number" step="0.01" class="reception-prix-ttc" value="${(it.prixUnitaireTTC || 0).toFixed(2)}" ${champsVerrouilles ? 'disabled' : ''}></td>
                             <td>${colonneStatut}</td>
                         </tr>`;
             });
             html += `</tbody></table>`;
 
-            if (actionnables.length > 0) {
+            if (actionnables.length > 0 && !estLectureSeule) {
                 html += `
                     <div class="frais-livraison-zone">
                         <label style="font-weight:600;font-size:13px;">🚚 Frais de livraison (€, optionnel)</label>
@@ -493,7 +511,7 @@
 
             try {
                 const res = await callAppsScript(APPS_SCRIPT_URL, 'validerReceptionLot', {
-                    orderId: openOrderId, items: items, fraisLivraison: fraisLivraison, remise: remise
+                    orderId: openOrderId, items: items, fraisLivraison: fraisLivraison, remise: remise, demandePar: localStorage.getItem('loggedUser') || ''
                 });
                 if (!res.success) throw new Error(res.error || 'Erreur script');
                 await loadOrders();

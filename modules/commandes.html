@@ -90,15 +90,15 @@
                         <div class="input-group" style="flex:0 0 auto;">
                             <button class="btn-refresh" onclick="window.open('https://drive.google.com/drive/folders/1umATpjVSLlpO4bCZatl58Xix1oD5gze4', '_blank')">📁 Ouvrir le Drive</button>
                         </div>
-                        <div class="input-group" style="flex:0 0 auto;">
+                        <div class="input-group" style="flex:0 0 auto;" data-hide-lecture-seule>
                             <button class="btn-refresh" onclick="promptAddFournisseur()">➕ Nouveau fournisseur</button>
                         </div>
-                        <div class="input-group" style="flex:0 0 auto;">
+                        <div class="input-group" style="flex:0 0 auto;" data-hide-lecture-seule>
                             <button class="btn-refresh" style="color:#991b1b;border-color:#991b1b;" onclick="promptRemoveFournisseur()">🗑️ Supprimer ce fournisseur</button>
                         </div>
                     </div>
 
-                    <div id="draftsZone" style="margin-bottom:20px;"></div>
+                    <div id="draftsZone" style="margin-bottom:20px;" data-hide-lecture-seule></div>
 
                     <div id="cmdLoading" class="loading-message" style="display:none;">
                         <div class="spinner"></div><p>Chargement des produits...</p>
@@ -136,7 +136,7 @@
                             <div class="total" id="cmdTotal">0,00 € TTC</div>
                             <div id="draftIndicator" style="font-size:12px;opacity:0.75;margin-top:4px;"></div>
                         </div>
-                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;" data-hide-lecture-seule>
                             <button class="btn-save-order" id="btnSaveDraft" onclick="saveDraft()" style="background:rgba(255,255,255,0.15);color:white;">
                                 📝 Enregistrer en brouillon
                             </button>
@@ -160,7 +160,7 @@
         };
 
         // ⚠️ À remplacer par l'URL /exec obtenue après déploiement de Code_Commandes.gs
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyx7CpxCT6Dw6p0-X7E9AlAen246teSKyKOTeUjYBaXApL8rRAPpa1X22BxDsU5kcR1lQ/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfGX4oJE2sUscTbEdH3vb5rpYhqIg8xuywWamfaRoyUw7EC0dqSGrblDC8LFon0VfO/exec';
 
         let selectedAnnee = '2025-2026'; // année active par défaut au chargement
         let currentFournisseurs = []; // liste des noms d'onglets fournisseurs pour le site sélectionné

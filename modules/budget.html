@@ -197,7 +197,13 @@
                 document.getElementById('titreSectionSP').textContent = 'Budgets antérieurs et prévisionnel de l\'année ' + anneeLong + ' - Saint-Pierre';
 
                 dessinerGraphiqueDechets(dechets.data);
-                dessinerHistogramme('chartTocqueville', 'totalTocqueville', prevTQ.data);
+                // Tocqueville n'a pas de catégorie "Épreuves" — on la retire de
+                // son histogramme (Saint-Pierre la garde, elle est pertinente là-bas).
+                const prevTQFiltre = {};
+                Object.keys(prevTQ.data).forEach(k => {
+                    if (k.toLowerCase() !== 'epreuves' && k.toLowerCase() !== 'epreuve') prevTQFiltre[k] = prevTQ.data[k];
+                });
+                dessinerHistogramme('chartTocqueville', 'totalTocqueville', prevTQFiltre);
                 dessinerHistogramme('chartSaintPierre', 'totalSaintPierre', prevSP.data);
 
                 const donneesTQ = historique.data.filter(d => d.site === 'tocqueville' && d.annee !== anneeLong);
@@ -241,7 +247,7 @@
         function dessinerGraphiqueDechets(donnees) {
             const labels = ['DASRI (biologique)', 'Autres déchets (chimique)'];
             const valeurs = [donnees.dasri, donnees.autresDechets];
-            const couleurs = ['#dc2626', '#64748b'];
+            const couleurs = ['#eab308', '#64748b']; // jaune saturé (DASRI) / gris (autres déchets)
 
             if (graphiques['chartDechets']) graphiques['chartDechets'].destroy();
             const ctx = document.getElementById('chartDechets').getContext('2d');

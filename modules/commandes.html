@@ -80,7 +80,7 @@
                         </div>
                         <div class="input-group">
                             <label>Fournisseur</label>
-                            <select id="fournisseurSelect" onchange="onFournisseurChange()" disabled>
+                            <select id="fournisseurSelect" onchange="onFournisseurChangeManuel()" disabled>
                                 <option value="">— Choisir un site d'abord —</option>
                             </select>
                         </div>
@@ -160,7 +160,7 @@
         };
 
         // ⚠️ À remplacer par l'URL /exec obtenue après déploiement de Code_Commandes.gs
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzN9YBMnnmzllal6JdNWcSWZ25qm2ZrfmXpAZkgRrNCmsoqoHjMdMBRPR8hjja2Wu731A/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyx7CpxCT6Dw6p0-X7E9AlAen246teSKyKOTeUjYBaXApL8rRAPpa1X22BxDsU5kcR1lQ/exec';
 
         let selectedAnnee = '2025-2026'; // année active par défaut au chargement
         let currentFournisseurs = []; // liste des noms d'onglets fournisseurs pour le site sélectionné
@@ -355,6 +355,16 @@
             fSelect.innerHTML = '<option value="">— Choisir un fournisseur —</option>' +
                 currentFournisseurs.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
             fSelect.disabled = false;
+        }
+
+        // Appelé uniquement par un vrai changement manuel du menu (pas par
+        // loadDraft(), qui appelle onFournisseurChange() directement) —
+        // repart d'un brouillon vierge, pour ne pas écraser par erreur le
+        // brouillon en cours d'édition si on change de fournisseur en route.
+        function onFournisseurChangeManuel() {
+            currentDraftId = null;
+            document.getElementById('draftIndicator').textContent = '';
+            onFournisseurChange();
         }
 
         async function onFournisseurChange() {

@@ -113,6 +113,7 @@ function creerOngletBrouillons(ss) {
  * et existe déjà, met à jour la ligne ; sinon en crée une nouvelle.
  */
 function saveDraft(payload) {
+  verifierPasLectureSeule(payload.creePar);
   const sheet = getRegistreSheet('Brouillons');
   const now = new Date();
   let draftId = payload.draftId;
@@ -185,7 +186,8 @@ function getDraft(draftId) {
  * ici, contrairement à une vraie commande — un brouillon abandonné
  * n'a jamais existé officiellement).
  */
-function deleteDraft(draftId) {
+function deleteDraft(draftId, demandePar) {
+  verifierPasLectureSeule(demandePar);
   const sheet = getRegistreSheet('Brouillons');
   const values = sheet.getDataRange().getValues();
   for (let i = 1; i < values.length; i++) {
@@ -215,16 +217,27 @@ function creerOngletTechniciens(ss) {
   if (ss.getSheetByName('Techniciens')) return; // déjà présent, on ne touche à rien
 
   const sheet = ss.insertSheet('Techniciens');
-  sheet.getRange(1, 1, 1, 5).setValues([['Identifiant', 'Nom complet', 'Téléphone', 'Email', 'Site']]);
+  sheet.getRange(1, 1, 1, 7).setValues([['Identifiant', 'Nom complet', 'Téléphone', 'Email', 'Site', 'Code', 'Niveau']]);
   sheet.setFrozenRows(1);
 
-  // Pré-rempli avec les comptes connus de login.html — à compléter
-  // (téléphone/email/site) directement dans le Sheet, sans avoir besoin
-  // de retoucher le script. Colonne Site : "tocqueville", "saintpierre",
-  // ou "tous" pour un accès aux deux sites (ex: DDFPT).
-  const comptes = ['m.cirefice', 'a.abidi', 'm.steuf', 'k.ovey', 'c.druot', 'm.duponchel', 'p.parisot'];
-  const rows = comptes.map(id => [id, '', '', '', id === 'm.cirefice' ? 'tous' : '']);
-  sheet.getRange(2, 1, rows.length, 5).setValues(rows);
+  // Pré-rempli avec les comptes connus — à compléter (téléphone/email/
+  // site/code) directement dans le Sheet, sans avoir besoin de
+  // retoucher le script. Colonne Site : "tocqueville", "saintpierre",
+  // ou "tous" pour un accès aux deux sites. Colonne Niveau : "DDFPT",
+  // "Technicien" ou "Lecture seule".
+  const comptes = [
+    { id: 'm.cirefice', site: 'tous', niveau: 'DDFPT' },
+    { id: 'a.abidi', site: '', niveau: 'Technicien' },
+    { id: 'm.steuf', site: '', niveau: 'Technicien' },
+    { id: 'k.ovey', site: '', niveau: 'Technicien' },
+    { id: 'c.druot', site: '', niveau: 'Technicien' },
+    { id: 'm.duponchel', site: '', niveau: 'Technicien' },
+    { id: 'p.parisot', site: '', niveau: 'Technicien' },
+    { id: 'chefetablissement', site: 'tous', niveau: 'Lecture seule' },
+    { id: 'comptabilite', site: 'tous', niveau: 'Lecture seule' }
+  ];
+  const rows = comptes.map(c => [c.id, '', '', '', c.site, '', c.niveau]);
+  sheet.getRange(2, 1, rows.length, 7).setValues(rows);
 }
 
 /**
@@ -240,8 +253,6 @@ function ajouterColonneSiteAuRegistreExistant() {
   }
   const nextCol = sheet.getLastColumn() + 1;
   sheet.getRange(1, nextCol).setValue('Site');
-  // m.cirefice (DDFPT) reçoit "tous" par défaut ; les autres restent
-  // vides, à compléter directement dans le Sheet.
   const values = sheet.getDataRange().getValues();
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][0]).trim() === 'm.cirefice') {
@@ -252,6 +263,62 @@ function ajouterColonneSiteAuRegistreExistant() {
 }
 
 /**
+ * À exécuter UNE SEULE FOIS pour ajouter les colonnes "Code" et
+ * "Niveau" à l'onglet Techniciens existant — nécessaires pour le
+ * nouveau système de connexion (login.html interroge ce Sheet au lieu
+ * d'une liste en dur avec mots de passe hashés visibles dans le code
+ * source public). m.cirefice reçoit "DDFPT", les comptes techniciens
+ * déjà présents "Technicien" — à ajuster ensuite si besoin directement
+ * dans le Sheet, et à compléter avec un code pour chaque compte.
+ */
+function ajouterColonnesCodeEtNiveauAuRegistreExistant() {
+  const sheet = getRegistreSheet('Techniciens');
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (headers.indexOf('Code') !== -1) {
+    Logger.log('Colonnes déjà présentes, rien à faire.');
+    return;
+  }
+  const nextCol = sheet.getLastColumn() + 1;
+  sheet.getRange(1, nextCol, 1, 2).setValues([['Code', 'Niveau']]);
+
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    const identifiant = String(values[i][0]).trim();
+    if (!identifiant) continue;
+    const niveau = identifiant === 'm.cirefice' ? 'DDFPT' : 'Technicien';
+    sheet.getRange(i + 1, nextCol + 1).setValue(niveau); // Code laissé vide, à définir
+  }
+  Logger.log('Colonnes "Code" et "Niveau" ajoutées en colonnes ' + nextCol + ' et ' + (nextCol + 1) + '. ⚠️ Pense à définir un code pour chaque compte avant de basculer login.html.');
+}
+
+/**
+ * À exécuter UNE SEULE FOIS pour ajouter les comptes "chefetablissement"
+ * et "comptabilite" (niveau "Lecture seule") à l'onglet Techniciens
+ * existant. Sans effet si un identifiant existe déjà.
+ */
+function ajouterComptesDirectionEtComptabiliteAuRegistreExistant() {
+  const sheet = getRegistreSheet('Techniciens');
+  const values = sheet.getDataRange().getValues();
+  const idsExistants = values.slice(1).map(r => String(r[0]).trim());
+
+  const nouveauxComptes = ['chefetablissement', 'comptabilite'];
+  const lignesAAjouter = [];
+  nouveauxComptes.forEach(id => {
+    if (idsExistants.indexOf(id) === -1) {
+      lignesAAjouter.push([id, '', '', '', 'tous', '', 'Lecture seule']);
+    }
+  });
+
+  if (lignesAAjouter.length === 0) {
+    Logger.log('Comptes déjà présents, rien à faire.');
+    return;
+  }
+  const startRow = sheet.getLastRow() + 1;
+  sheet.getRange(startRow, 1, lignesAAjouter.length, 7).setValues(lignesAAjouter);
+  Logger.log(lignesAAjouter.length + ' compte(s) ajouté(s) : ' + lignesAAjouter.map(l => l[0]).join(', ') + '. ⚠️ Pense à leur définir un code.');
+}
+
+/**
  * Lit les coordonnées d'un technicien dans l'onglet Techniciens du
  * registre. Renvoie des valeurs vides si l'identifiant est introuvable
  * ou si les champs n'ont pas encore été complétés — ne bloque jamais
@@ -259,7 +326,7 @@ function ajouterColonneSiteAuRegistreExistant() {
  */
 function getTechnicienInfo(identifiant) {
   const sheet = getRegistreSheet('Techniciens');
-  if (!sheet) return { nom: identifiant, telephone: '', email: '', site: '' };
+  if (!sheet) return { nom: identifiant, telephone: '', email: '', site: '', niveau: '' };
   const values = sheet.getDataRange().getValues();
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][0]).trim() === identifiant) {
@@ -267,11 +334,12 @@ function getTechnicienInfo(identifiant) {
         nom: values[i][1] || identifiant,
         telephone: values[i][2] || '',
         email: values[i][3] || '',
-        site: String(values[i][4] || '').trim().toLowerCase()
+        site: String(values[i][4] || '').trim().toLowerCase(),
+        niveau: String(values[i][6] || 'Technicien').trim()
       };
     }
   }
-  return { nom: identifiant, telephone: '', email: '', site: '' };
+  return { nom: identifiant, telephone: '', email: '', site: '', niveau: '' };
 }
 
 /**
@@ -287,12 +355,64 @@ function verifierPermissionSite(identifiant, site) {
   }
 }
 
-function getRegistreSheet(sheetName) {
-  if (!REGISTRE_SHEET_ID || REGISTRE_SHEET_ID === 'A_COMPLETER_APRES_initRegistre') {
-    throw new Error('Registre non configuré : lancer initRegistre() puis renseigner REGISTRE_SHEET_ID.');
+/**
+ * Garde de sécurité à appeler en tout début de chaque fonction qui
+ * MODIFIE des données. Lève une erreur si le compte est en "Lecture
+ * seule" — vérifié côté serveur (pas juste un bouton caché côté appli),
+ * donc infalsifiable depuis le navigateur.
+ */
+function verifierPasLectureSeule(identifiant) {
+  const info = getTechnicienInfo(identifiant);
+  if (info.niveau === 'Lecture seule') {
+    throw new Error('Ce compte est en lecture seule — action non autorisée.');
   }
-  const ss = SpreadsheetApp.openById(REGISTRE_SHEET_ID);
-  return ss.getSheetByName(sheetName);
+}
+
+/**
+ * Vérifie un identifiant + code contre l'onglet Techniciens, pour le
+ * système de connexion de login.html (remplace la liste d'utilisateurs
+ * avec mots de passe hashés codée en dur dans la page — en plus d'être
+ * plus pratique à gérer, les codes ne sont plus jamais visibles dans le
+ * code source public de la page).
+ */
+function verifierConnexion(identifiant, code) {
+  const sheet = getRegistreSheet('Techniciens');
+  if (!sheet) throw new Error('Système de connexion non configuré.');
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    const id = String(values[i][0]).trim();
+    if (id !== String(identifiant || '').trim()) continue;
+    const codeAttendu = String(values[i][5] || '').trim();
+    if (!codeAttendu) throw new Error('Aucun code défini pour ce compte — contacte le DDFPT.');
+    if (codeAttendu !== String(code || '').trim()) throw new Error('Identifiant ou code incorrect.');
+    return {
+      identifiant: id,
+      nom: values[i][1] || id,
+      niveau: String(values[i][6] || 'Technicien').trim()
+    };
+  }
+  throw new Error('Identifiant ou code incorrect.');
+}
+
+let _registreSpreadsheetCache = null;
+
+function getRegistreSpreadsheet() {
+  // Réutilise le même objet Spreadsheet au sein d'une exécution donnée,
+  // pour éviter d'ouvrir plusieurs fois le même classeur (chaque
+  // ouverture a un coût réseau) — utile car listProduits() par exemple
+  // appelle getRegistreSheet() deux fois (Commandes + Détail) dans le
+  // même appel.
+  if (!_registreSpreadsheetCache) {
+    if (!REGISTRE_SHEET_ID || REGISTRE_SHEET_ID === 'A_COMPLETER_APRES_initRegistre') {
+      throw new Error('Registre non configuré : lancer initRegistre() puis renseigner REGISTRE_SHEET_ID.');
+    }
+    _registreSpreadsheetCache = SpreadsheetApp.openById(REGISTRE_SHEET_ID);
+  }
+  return _registreSpreadsheetCache;
+}
+
+function getRegistreSheet(sheetName) {
+  return getRegistreSpreadsheet().getSheetByName(sheetName);
 }
 
 // ── SUIVI DES COMMANDES (réception item par item) ──────────────────
@@ -574,6 +694,103 @@ function deplacerColonneQuantite(sheet) {
   });
 }
 
+/**
+ * À exécuter UNE SEULE FOIS pour ajouter la colonne "Cdt" (conditionnement)
+ * à l'onglet Détail existant — jamais sauvegardée jusqu'ici. Sans effet
+ * si déjà présente.
+ */
+function ajouterColonneCdtAuRegistreExistant() {
+  const sheet = getRegistreSheet('Détail');
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (headers.indexOf('Cdt') !== -1) {
+    Logger.log('Colonne Cdt déjà présente, rien à faire.');
+    return;
+  }
+  const nextCol = sheet.getLastColumn() + 1;
+  sheet.getRange(1, nextCol).setValue('Cdt');
+  Logger.log('Colonne "Cdt" ajoutée en colonne ' + nextCol + '.');
+}
+
+/**
+ * Rattrapage : remplit rétroactivement la colonne "Cdt" de toutes les
+ * lignes de "Détail" où elle est vide, en allant chercher la valeur
+ * dans l'onglet fournisseur d'origine (correspondance par désignation).
+ * Sûr à relancer plusieurs fois — ignore les lignes déjà remplies.
+ */
+function remplirCdtManquantsDansRegistre() {
+  const detailSheet = getRegistreSheet('Détail');
+  const detailValues = detailSheet.getDataRange().getValues();
+  const colCdt = detailSheet.getRange(1, 1, 1, detailSheet.getLastColumn()).getValues()[0].indexOf('Cdt') + 1;
+  if (colCdt === 0) { Logger.log('Colonne Cdt introuvable — lance d\'abord ajouterColonneCdtAuRegistreExistant.'); return; }
+
+  const cmdSheet = getRegistreSheet('Commandes');
+  const cmdValues = cmdSheet.getDataRange().getValues();
+  const infosParCommande = {}; // orderId -> {site, fournisseur, anneeLong}
+  for (let i = 1; i < cmdValues.length; i++) {
+    const id = String(cmdValues[i][0]);
+    if (!id) continue;
+    infosParCommande[id] = { site: cmdValues[i][2], fournisseur: cmdValues[i][3], anneeLong: cmdValues[i][11] };
+  }
+
+  const cacheOnglets = {}; // clé "annee|site|fournisseur" -> Map(désignation normalisée -> Cdt)
+  let compteurTrouves = 0, compteurNonTrouves = 0, compteurDejaRemplis = 0;
+
+  for (let i = 1; i < detailValues.length; i++) {
+    const row = detailValues[i];
+    const orderId = String(row[0] || '');
+    if (!orderId) continue;
+    if (row[colCdt - 1]) { compteurDejaRemplis++; continue; } // déjà rempli
+
+    const infos = infosParCommande[orderId];
+    if (!infos) { compteurNonTrouves++; continue; }
+
+    const cle = infos.anneeLong + '|' + infos.site + '|' + infos.fournisseur;
+    if (!cacheOnglets[cle]) {
+      try {
+        const ss = openSiteSheet(infos.anneeLong, infos.site);
+        let sheet = ss.getSheetByName(infos.fournisseur);
+        if (!sheet) {
+          const normalize = s => String(s).replace(/^\s*\d+\s*-?\s*/, '').replace(/\s+/g, '').toLowerCase();
+          const target = normalize(infos.fournisseur);
+          sheet = ss.getSheets().find(s => normalize(s.getName()) === target);
+        }
+        const map = {};
+        if (sheet) {
+          const values = sheet.getDataRange().getValues();
+          const headerRow = values[2] || [];
+          let idxDesignation = -1, idxCdt = -1;
+          headerRow.forEach((h, idx) => {
+            const n = normalizeText(h);
+            if (n === normalizeText('Désignation produit')) idxDesignation = idx;
+            if (n === normalizeText('Cdt')) idxCdt = idx;
+          });
+          if (idxDesignation !== -1 && idxCdt !== -1) {
+            values.forEach(r => {
+              const d = String(r[idxDesignation] || '').trim();
+              if (d) map[normalizeText(d)] = String(r[idxCdt] || '');
+            });
+          }
+        }
+        cacheOnglets[cle] = map;
+      } catch (err) {
+        Logger.log('Erreur lecture onglet pour ' + cle + ' : ' + err.message);
+        cacheOnglets[cle] = {};
+      }
+    }
+
+    const designationNorm = normalizeText(row[1] || '');
+    const cdtTrouve = cacheOnglets[cle][designationNorm];
+    if (cdtTrouve !== undefined) {
+      detailSheet.getRange(i + 1, colCdt).setValue(cdtTrouve);
+      compteurTrouves++;
+    } else {
+      compteurNonTrouves++;
+    }
+  }
+
+  Logger.log('Terminé. Cdt retrouvés : ' + compteurTrouves + ' | Déjà remplis : ' + compteurDejaRemplis + ' | Non trouvés : ' + compteurNonTrouves);
+}
+
 function ajouterColonnesReceptionAuRegistreExistant() {
   const sheet = getRegistreSheet('Détail');
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -610,7 +827,9 @@ function listOrders(anneeLong, site) {
     orders.push({
       orderId: row[0], dateCreation: row[1], site: row[2], fournisseur: row[3],
       creePar: row[4], nbItems: row[5], totalHT: row[6], totalTTC: row[7],
-      statut: row[8], dateMAJ: row[9], docUrl: row[10], anneeLong: row[11]
+      statut: row[8], dateMAJ: row[9], docUrl: row[10], anneeLong: row[11],
+      signatureDdfpt: row[12] || 'En attente', fraisLivraisonCumules: row[14] || 0,
+      remisesCumulees: row[15] || 0
     });
   }
   // Plus récent en premier
@@ -636,7 +855,8 @@ function getOrderItems(orderId) {
       prixUnitaireHT: row[4], totalHT: row[5], typeDepense: row[6],
       codeAnalytique: row[7], statutReception: row[8] || 'En attente',
       dateReception: row[9] || '',
-      prixUnitaireTTC: row[10] || 0, totalTTC: row[11] || 0
+      prixUnitaireTTC: row[10] || 0, totalTTC: row[11] || 0,
+      cdt: row[12] || ''
     });
   }
   return items;
@@ -652,7 +872,153 @@ function getOrderItems(orderId) {
  * raccourci pour passer directement en "Reçu complet" sans cocher
  * chaque item un par un.
  */
-function markAllReceived(orderId) {
+/**
+ * Régénère le Doc d'une commande à partir des items actuellement dans
+ * "Détail" (utile si des items ont été ajoutés/corrigés à la main dans
+ * le registre après coup). Crée un nouveau Doc, remplace le lien dans
+ * "Commandes", et met l'ancien Doc à la corbeille pour éviter les
+ * doublons. Recalcule aussi les totaux au passage.
+ */
+function regenererDoc(orderId, demandePar) {
+  verifierPasLectureSeule(demandePar);
+  const cmdSheet = getRegistreSheet('Commandes');
+  const values = cmdSheet.getDataRange().getValues();
+  let ligneIdx = -1;
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0]) === orderId) { ligneIdx = i; break; }
+  }
+  if (ligneIdx === -1) throw new Error('Commande introuvable : ' + orderId);
+
+  const row = values[ligneIdx];
+  const site = row[2], fournisseur = row[3], creePar = row[4];
+  const anneeLong = row[11], dateCreation = row[1], ancienDocUrl = row[10];
+  if (row[8] === 'Annulée') throw new Error('Cette commande est annulée, son document ne peut plus être régénéré.');
+
+  const siteInfo = SITE_CODES[site];
+  if (!siteInfo) throw new Error('Site inconnu : ' + site);
+  const codeCourt = orderId.slice(0, orderId.length - String(fournisseur).length - 1);
+
+  const items = getOrderItems(orderId);
+  if (items.length === 0) throw new Error('Aucun item trouvé pour cette commande dans "Détail".');
+
+  let totalHT = 0, totalTTC = 0;
+  items.forEach(it => {
+    totalHT += (it.prixUnitaireHT || 0) * (it.quantite || 0);
+    totalTTC += (it.prixUnitaireTTC || 0) * (it.quantite || 0);
+  });
+
+  // Met à jour le nombre d'items et les totaux (au cas où ils auraient changé)
+  cmdSheet.getRange(ligneIdx + 1, 6).setValue(items.length);
+  cmdSheet.getRange(ligneIdx + 1, 7).setValue(totalHT);
+  cmdSheet.getRange(ligneIdx + 1, 8).setValue(totalTTC);
+
+  const payload = { site: site, fournisseur: fournisseur, creePar: creePar };
+  const nouveauDocUrl = generateOrderDoc(orderId, codeCourt, payload, items, totalHT, totalTTC, new Date(dateCreation), siteInfo, anneeLong);
+
+  cmdSheet.getRange(ligneIdx + 1, 11).setValue(nouveauDocUrl);
+  cmdSheet.getRange(ligneIdx + 1, 10).setValue(new Date());
+
+  // Met l'ancien Doc à la corbeille pour éviter les doublons dans Drive.
+  if (ancienDocUrl) {
+    const match = String(ancienDocUrl).match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match) {
+      try { DriveApp.getFileById(match[1]).setTrashed(true); }
+      catch (err) { Logger.log('Impossible de mettre l\'ancien document à la corbeille : ' + err.message); }
+    }
+  }
+
+  return { orderId: orderId, docUrl: nouveauDocUrl, nbItems: items.length, totalHT: totalHT, totalTTC: totalTTC };
+}
+
+/**
+ * Valide la réception de PLUSIEURS items en une seule fois (au lieu
+ * d'un appel serveur par item comme avant — beaucoup plus rapide côté
+ * appli). Permet aussi de corriger le prix réel de chaque item si la
+ * facture indique un montant différent de l'estimation, et d'ajouter
+ * des frais de livraison (cumulés au fil des réceptions partielles
+ * d'une même commande, pour les factures qui arrivent en plusieurs fois).
+ *
+ * items : [{ rowIndex, prixHT (optionnel), prixTTC (optionnel) }, ...]
+ */
+/**
+ * Valide la réception de PLUSIEURS items en une seule fois. Chaque item
+ * peut être marqué "Reçu" ou "Rupture stock" (rupture chez le
+ * fournisseur — reste tracé pour repasser la commande plus tard en cas
+ * de réapprovisionnement, sans bloquer le reste de la commande).
+ * Permet aussi de corriger le prix réel de chaque item, et d'ajouter
+ * des frais de livraison et/ou une remise globale sur la facture
+ * (cumulés au fil des réceptions partielles d'une même commande).
+ *
+ * items : [{ rowIndex, statut ('Reçu' ou 'Rupture stock'),
+ *            prixHT (optionnel), prixTTC (optionnel) }, ...]
+ */
+function validerReceptionLot(orderId, items, fraisLivraison, remise, demandePar) {
+  verifierPasLectureSeule(demandePar);
+  if (!items || items.length === 0) throw new Error('Aucun item à valider.');
+
+  const detailSheet = getRegistreSheet('Détail');
+  const now = new Date();
+
+  items.forEach(it => {
+    const row = it.rowIndex;
+    const quantite = parseFloat(detailSheet.getRange(row, 4).getValue()) || 0;
+    const nouveauStatut = (it.statut === 'Rupture stock') ? 'Rupture stock' : 'Reçu';
+
+    detailSheet.getRange(row, 9, 1, 2).setValues([[nouveauStatut, now]]);
+
+    // Correction de prix optionnelle (si la facture indique un montant
+    // différent de l'estimation faite à la commande) — recalcule le
+    // total de la ligne en conséquence. Si non fourni, on ne touche pas
+    // au prix déjà enregistré.
+    if (it.prixHT !== undefined && it.prixHT !== null && it.prixHT !== '') {
+      const prixHT = parseFloat(it.prixHT) || 0;
+      detailSheet.getRange(row, 5, 1, 2).setValues([[prixHT, prixHT * quantite]]);
+    }
+    if (it.prixTTC !== undefined && it.prixTTC !== null && it.prixTTC !== '') {
+      const prixTTC = parseFloat(it.prixTTC) || 0;
+      detailSheet.getRange(row, 11, 1, 2).setValues([[prixTTC, prixTTC * quantite]]);
+    }
+  });
+
+  const statutGlobal = recalculerStatutCommande(orderId);
+
+  // Frais de livraison et remise : cumulés (une commande peut être
+  // livrée/facturée en plusieurs fois, chacune avec ses propres frais
+  // de port et remises).
+  const frais = parseFloat(fraisLivraison) || 0;
+  const remiseMontant = parseFloat(remise) || 0;
+  let fraisLivraisonTotal = null;
+  let remiseTotal = null;
+
+  if (frais > 0 || remiseMontant > 0) {
+    const cmdSheet = getRegistreSheet('Commandes');
+    const values = cmdSheet.getDataRange().getValues();
+    for (let i = 1; i < values.length; i++) {
+      if (String(values[i][0]) === orderId) {
+        if (frais > 0) {
+          const colFrais = 15; // "Frais de livraison cumulés"
+          fraisLivraisonTotal = (parseFloat(values[i][colFrais - 1]) || 0) + frais;
+          cmdSheet.getRange(i + 1, colFrais).setValue(fraisLivraisonTotal);
+        }
+        if (remiseMontant > 0) {
+          const colRemise = 16; // "Remises cumulées"
+          remiseTotal = (parseFloat(values[i][colRemise - 1]) || 0) + remiseMontant;
+          cmdSheet.getRange(i + 1, colRemise).setValue(remiseTotal);
+        }
+        break;
+      }
+    }
+  }
+
+  return {
+    orderId: orderId, statutGlobal: statutGlobal, itemsValides: items.length,
+    fraisLivraisonAjoutes: frais, fraisLivraisonTotal: fraisLivraisonTotal,
+    remiseAjoutee: remiseMontant, remiseTotal: remiseTotal
+  };
+}
+
+function markAllReceived(orderId, demandePar) {
+  verifierPasLectureSeule(demandePar);
   const detailSheet = getRegistreSheet('Détail');
   const values = detailSheet.getDataRange().getValues();
   const now = new Date();
@@ -668,7 +1034,8 @@ function markAllReceived(orderId) {
   return { orderId: orderId, statutGlobal: statutGlobal, itemsMarques: compteur };
 }
 
-function updateItemStatus(rowIndex, nouveauStatut) {
+function updateItemStatus(rowIndex, nouveauStatut, demandePar) {
+  verifierPasLectureSeule(demandePar);
   const detailSheet = getRegistreSheet('Détail');
   const orderId = detailSheet.getRange(rowIndex, 1).getValue();
   if (!orderId) throw new Error('Ligne invalide ou item introuvable.');
@@ -690,6 +1057,8 @@ function recalculerStatutCommande(orderId) {
   const items = getOrderItems(orderId);
   const total = items.length;
   const recus = items.filter(it => it.statutReception === 'Reçu').length;
+  const ruptures = items.filter(it => it.statutReception === 'Rupture stock').length;
+  const traites = recus + ruptures; // un item en rupture est "traité" (décision prise), même si pas reçu
 
   const cmdSheet = getRegistreSheet('Commandes');
   const values = cmdSheet.getDataRange().getValues();
@@ -705,10 +1074,10 @@ function recalculerStatutCommande(orderId) {
   if (statutActuel === 'Annulée') return statutActuel;
 
   let nouveauStatut;
-  if (recus === 0) {
-    nouveauStatut = statutActuel; // ne touche pas à "À commander"/"Commandé" tant que rien n'est reçu
-  } else if (recus === total) {
-    nouveauStatut = 'Reçu complet';
+  if (traites === 0) {
+    nouveauStatut = statutActuel; // ne touche pas à "À commander"/"Commandé" tant que rien n'est traité
+  } else if (traites === total) {
+    nouveauStatut = 'Reçu complet'; // tout traité (reçu et/ou constaté en rupture)
   } else {
     nouveauStatut = 'Reçu partiel';
   }
@@ -725,7 +1094,8 @@ function recalculerStatutCommande(orderId) {
  * (voir recalculerStatutCommande) — sauf via markAllReceived() pour
  * un passage direct en "Reçu complet".
  */
-function setOrderStatus(orderId, nouveauStatut) {
+function setOrderStatus(orderId, nouveauStatut, demandePar) {
+  verifierPasLectureSeule(demandePar);
   const AUTORISES = ['À commander', 'Commandé'];
   if (AUTORISES.indexOf(nouveauStatut) === -1) {
     throw new Error('Statut non autorisé en changement manuel : ' + nouveauStatut);
@@ -749,7 +1119,128 @@ function setOrderStatus(orderId, nouveauStatut) {
  * le document généré avec le préfixe "ANNULÉ - " pour le repérer au
  * premier coup d'œil dans Drive.
  */
-function cancelOrder(orderId) {
+// ID Drive de l'image de signature DDFPT (.jpeg) — à compléter une fois
+// le fichier uploadé dans Drive.
+const SIGNATURE_DDFPT_IMAGE_ID = '1S4d-6pEHltYz4GH-BXZVWOzuSlIxnqny';
+
+/**
+ * Signe une commande : ajoute "Accord pour commande" + l'image de
+ * signature en bas du Google Doc lié, et marque la commande comme
+ * signée dans le registre. Réservé au DDFPT (m.cirefice).
+ */
+function signOrder(orderId, demandePar) {
+  if (demandePar !== 'm.cirefice') {
+    throw new Error('Action réservée au DDFPT.');
+  }
+  if (!SIGNATURE_DDFPT_IMAGE_ID || SIGNATURE_DDFPT_IMAGE_ID === 'ID_IMAGE_SIGNATURE_A_COMPLETER') {
+    throw new Error('Image de signature non configurée (SIGNATURE_DDFPT_IMAGE_ID).');
+  }
+
+  const cmdSheet = getRegistreSheet('Commandes');
+  const values = cmdSheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0]) !== orderId) continue;
+
+    const docUrl = values[i][10];
+    if (!docUrl) throw new Error('Aucun document lié à cette commande.');
+    const match = String(docUrl).match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (!match) throw new Error('Impossible de retrouver le document (lien invalide).');
+
+    const doc = DocumentApp.openById(match[1]);
+    const body = doc.getBody();
+
+    body.appendParagraph(''); // petit espace avant la signature
+    const pMention = body.appendParagraph('Accord pour commande');
+    pMention.editAsText().setBold(true);
+    pMention.setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+
+    const imageBlob = DriveApp.getFileById(SIGNATURE_DDFPT_IMAGE_ID).getBlob();
+    const image = body.appendImage(imageBlob);
+    image.setWidth(149);  // 5,24 cm
+    image.setHeight(79);  // 2,8 cm
+    image.getParent().asParagraph().setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+
+    doc.saveAndClose();
+
+    // Colonne 13 = "Signature DDFPT" (ajoutée au registre)
+    cmdSheet.getRange(i + 1, 13).setValue('Signé');
+    cmdSheet.getRange(i + 1, 14).setValue(new Date());
+
+    return { orderId: orderId, signature: 'Signé' };
+  }
+  throw new Error('Commande introuvable : ' + orderId);
+}
+
+/**
+ * À exécuter UNE SEULE FOIS pour ajouter les colonnes "Signature DDFPT"
+ * et "Date signature" à l'onglet Commandes existant.
+ */
+function ajouterColonnesSignatureAuRegistreExistant() {
+  const sheet = getRegistreSheet('Commandes');
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (headers.indexOf('Signature DDFPT') !== -1) {
+    Logger.log('Colonnes déjà présentes, rien à faire.');
+    return;
+  }
+  const nextCol = sheet.getLastColumn() + 1;
+  sheet.getRange(1, nextCol, 1, 2).setValues([['Signature DDFPT', 'Date signature']]);
+
+  // Rétro-remplit "En attente" sur les commandes existantes.
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    const valeurs = [];
+    for (let i = 0; i < lastRow - 1; i++) valeurs.push(['En attente']);
+    sheet.getRange(2, nextCol, valeurs.length, 1).setValues(valeurs);
+  }
+  Logger.log('Colonnes "Signature DDFPT" / "Date signature" ajoutées en colonnes ' + nextCol + ' et ' + (nextCol + 1) + '.');
+}
+
+/**
+ * À exécuter UNE SEULE FOIS pour ajouter la colonne "Frais de livraison
+ * cumulés" à l'onglet Commandes existant. Sans effet si déjà présente.
+ */
+function ajouterColonneFraisLivraisonAuRegistreExistant() {
+  const sheet = getRegistreSheet('Commandes');
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (headers.indexOf('Frais de livraison cumulés') !== -1) {
+    Logger.log('Colonne déjà présente, rien à faire.');
+    return;
+  }
+  const nextCol = sheet.getLastColumn() + 1;
+  sheet.getRange(1, nextCol).setValue('Frais de livraison cumulés');
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    const valeurs = [];
+    for (let i = 0; i < lastRow - 1; i++) valeurs.push([0]);
+    sheet.getRange(2, nextCol, valeurs.length, 1).setValues(valeurs);
+  }
+  Logger.log('Colonne "Frais de livraison cumulés" ajoutée en colonne ' + nextCol + '.');
+}
+
+/**
+ * À exécuter UNE SEULE FOIS pour ajouter la colonne "Remises cumulées"
+ * à l'onglet Commandes existant. Sans effet si déjà présente.
+ */
+function ajouterColonneRemisesAuRegistreExistant() {
+  const sheet = getRegistreSheet('Commandes');
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (headers.indexOf('Remises cumulées') !== -1) {
+    Logger.log('Colonne déjà présente, rien à faire.');
+    return;
+  }
+  const nextCol = sheet.getLastColumn() + 1;
+  sheet.getRange(1, nextCol).setValue('Remises cumulées');
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    const valeurs = [];
+    for (let i = 0; i < lastRow - 1; i++) valeurs.push([0]);
+    sheet.getRange(2, nextCol, valeurs.length, 1).setValues(valeurs);
+  }
+  Logger.log('Colonne "Remises cumulées" ajoutée en colonne ' + nextCol + '.');
+}
+
+function cancelOrder(orderId, demandePar) {
+  verifierPasLectureSeule(demandePar);
   const cmdSheet = getRegistreSheet('Commandes');
   const values = cmdSheet.getDataRange().getValues();
   for (let i = 1; i < values.length; i++) {
@@ -825,6 +1316,7 @@ function nextOrderSequence(siteCode, anneeCourt) {
  * ]}
  */
 function saveOrder(payload) {
+  verifierPasLectureSeule(payload.creePar);
   const items = payload.items || [];
   if (items.length === 0) throw new Error('Aucun item sélectionné.');
 
@@ -850,6 +1342,31 @@ function saveOrder(payload) {
   });
 
   const cmdSheet = getRegistreSheet('Commandes');
+
+  // ── Détection de doublon ────────────────────────────────────────
+  // Si une commande quasi-identique (même site, fournisseur, créateur,
+  // nombre d'items, total TTC très proche) a été créée il y a moins de
+  // 3 minutes, on considère que c'est un doublon accidentel (double-clic
+  // après un message d'erreur alors que l'enregistrement avait en fait
+  // réussi) plutôt qu'une vraie nouvelle commande.
+  const SEUIL_DOUBLON_MS = 3 * 60 * 1000; // 3 minutes
+  const cmdValeurs = cmdSheet.getDataRange().getValues();
+  for (let i = 1; i < cmdValeurs.length; i++) {
+    const row = cmdValeurs[i];
+    if (String(row[2]) !== payload.site) continue;
+    if (String(row[3]) !== payload.fournisseur) continue;
+    if (String(row[4]) !== (payload.creePar || '')) continue;
+    if (String(row[8]) === 'Annulée') continue;
+    if (Number(row[5]) !== items.length) continue;
+    const totalTTCExistant = Number(row[7]) || 0;
+    if (Math.abs(totalTTCExistant - totalTTC) > 0.01) continue;
+    const dateExistante = new Date(row[1]);
+    if (isNaN(dateExistante.getTime())) continue;
+    if ((now.getTime() - dateExistante.getTime()) < SEUIL_DOUBLON_MS) {
+      throw new Error('Commande déjà créée ! (' + row[0] + ', enregistrée il y a moins de 3 minutes) — vérifie dans "Suivi Commandes" avant de recommencer.');
+    }
+  }
+
   cmdSheet.appendRow([
     orderId, now, payload.site, payload.fournisseur, payload.creePar || '',
     items.length, totalHT, totalTTC, 'À commander', now, '', anneeLong
@@ -869,7 +1386,8 @@ function saveOrder(payload) {
       it.prixUnitaireHT || 0, totalLigneHT,
       it.typeDepense || '', it.codeAnalytique || '',
       'En attente', '',
-      it.prixUnitaireTTC || 0, totalLigneTTC
+      it.prixUnitaireTTC || 0, totalLigneTTC,
+      it.cdt || ''
     ]);
   });
 
@@ -882,6 +1400,8 @@ function saveOrder(payload) {
   } catch (docErr) {
     Logger.log('Erreur génération du document pour ' + orderId + ' : ' + docErr.message);
   }
+
+  invaliderCacheDejaCommandees(anneeLong, payload.site, payload.fournisseur);
 
   return { orderId: orderId, totalHT: totalHT, totalTTC: totalTTC, docUrl: docUrl };
 }
@@ -987,7 +1507,7 @@ function generateOrderDoc(orderId, codeCourt, payload, items, totalHT, totalTTC,
   // Le tableau produits n'affiche que le TTC (l'association ne récupère
   // pas la TVA) — le HT reste dans le tableau de répartition analytique.
   const marqueur = body.findText('\\{\\{\\s*TABLEAU_PRODUITS\\s*\\}\\}');
-  const tableData = [['Désignation', 'Référence', 'Cdt', 'Qté', 'Prix unit. TTC', 'Total TTC']];
+  const tableData = [['Désignation', 'Référence', 'Cdt', 'Qté', 'Prix TTC', 'Total TTC']];
   items.forEach(it => {
     const ligneTotalTTC = (it.prixUnitaireTTC || 0) * (it.quantite || 0);
     tableData.push([
@@ -1040,7 +1560,7 @@ function generateOrderDoc(orderId, codeCourt, payload, items, totalHT, totalTTC,
 
   // Le tableau analytique ne sert qu'à la comptabilité interne — police
   // plus petite pour rester discret par rapport au tableau produits.
-  reduireTaillePoliceTable(tableRecap, 9);
+  reduireTaillePoliceTable(tableRecap, 8);
 
   doc.saveAndClose();
   return copyFile.getUrl();
@@ -1050,6 +1570,16 @@ function generateOrderDoc(orderId, codeCourt, payload, items, totalHT, totalTTC,
 // même à 0€ (avec une croix ✗ plutôt que "0,00 €"). La correspondance
 // avec la vraie valeur du Sheet ignore accents, espaces et tirets, pour
 // matcher "LYCEE GENERAL", "Lycée Général", "lycee-general" etc.
+/**
+ * Normalise un texte pour comparaison (retire les accents, espaces
+ * superflus, met en minuscules) — fonction UNIQUE utilisée partout
+ * dans le script (déclarée une seule fois pour éviter tout bug de
+ * portée si une fonction l'utilise sans la redéfinir localement).
+ */
+function normalizeText(s) {
+  return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+}
+
 const CODES_ANALYTIQUES_FIXES = [
   { cle: 'college', libelle: 'Collège' },
   { cle: 'lyceegeneral', libelle: 'Lycée général' },
@@ -1084,6 +1614,17 @@ function normaliserCodeAnalytique(s) {
  */
 function reduireTaillePoliceTable(table, taille) {
   if (!table) return;
+  const nbColonnes = table.getRow(0).getNumCells();
+
+  // Colonnes resserrées : "Code analytique" a besoin d'un peu de place
+  // pour les libellés longs ("Lycée technologique"), les 2 colonnes de
+  // montant restent étroites — ce tableau ne sert qu'à la comptabilité
+  // interne, pas la peine qu'il prenne toute la largeur de la page.
+  const largeurs = [120, 65, 65];
+  for (let c = 0; c < nbColonnes; c++) {
+    table.setColumnWidth(c, largeurs[c] || 65);
+  }
+
   for (let r = 0; r < table.getNumRows(); r++) {
     const ligne = table.getRow(r);
     for (let c = 0; c < ligne.getNumCells(); c++) {
@@ -1096,10 +1637,12 @@ function mettreEnFormeTableauProduits(table) {
   if (!table) return;
   const nbColonnes = table.getRow(0).getNumCells();
 
-  // Largeurs (en points) : Désignation nettement plus large que le reste.
-  table.setColumnWidth(0, 220);
-  for (let c = 1; c < nbColonnes; c++) {
-    table.setColumnWidth(c, 75);
+  // Largeurs (en points) calculées pour tenir dans la largeur imprimable
+  // d'une page (~470-500pt utiles) : Désignation | Référence | Cdt | Qté
+  // | Prix unit. TTC | Total TTC — total visé ≈ 455pt.
+  const largeurs = [160, 70, 40, 35, 75, 75];
+  for (let c = 0; c < nbColonnes; c++) {
+    table.setColumnWidth(c, largeurs[c] || 70);
   }
 
   for (let r = 0; r < table.getNumRows(); r++) {
@@ -1112,6 +1655,7 @@ function mettreEnFormeTableauProduits(table) {
       if (estEntete) {
         cellule.setBackgroundColor('#f1f3f4');
         cellule.editAsText().setBold(true);
+        cellule.editAsText().setFontSize(9); // en-tête compact pour éviter le retour à la ligne
       }
 
       // Alignement horizontal du texte : Désignation (colonne 0) à
@@ -1243,6 +1787,34 @@ function createNewSchoolYear(anneeLong) {
   return results;
 }
 
+/**
+ * Fonction quasi vide, appelée périodiquement par un déclencheur pour
+ * garder le script "chaud" côté Google (évite le petit délai de
+ * démarrage à froid quand personne ne l'a appelé depuis un moment).
+ */
+function reveilScript() {
+  // Une seule opération minimale, juste pour que l'exécution ait un
+  // vrai travail à faire plutôt que d'être totalement vide.
+  CacheService.getScriptCache().get('reveil');
+}
+
+/**
+ * À exécuter UNE SEULE FOIS depuis l'éditeur pour installer le
+ * déclencheur programmé (toutes les 10 minutes) qui appelle
+ * reveilScript(). Sûr à relancer : retire l'ancien déclencheur du même
+ * nom avant d'en recréer un, pour éviter les doublons.
+ */
+function installerDeclencheurReveil() {
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === 'reveilScript') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('reveilScript')
+    .timeBased()
+    .everyMinutes(10)
+    .create();
+  Logger.log('Déclencheur de réveil installé (toutes les 10 minutes).');
+}
+
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
@@ -1272,16 +1844,25 @@ function doPost(e) {
         result = getOrderItems(body.orderId);
         break;
       case 'updateItemStatus':
-        result = updateItemStatus(body.rowIndex, body.nouveauStatut);
+        result = updateItemStatus(body.rowIndex, body.nouveauStatut, body.demandePar);
         break;
       case 'setOrderStatus':
-        result = setOrderStatus(body.orderId, body.nouveauStatut);
+        result = setOrderStatus(body.orderId, body.nouveauStatut, body.demandePar);
         break;
       case 'markAllReceived':
-        result = markAllReceived(body.orderId);
+        result = markAllReceived(body.orderId, body.demandePar);
+        break;
+      case 'validerReceptionLot':
+        result = validerReceptionLot(body.orderId, body.items, body.fraisLivraison, body.remise, body.demandePar);
+        break;
+      case 'regenererDoc':
+        result = regenererDoc(body.orderId, body.demandePar);
         break;
       case 'cancelOrder':
-        result = cancelOrder(body.orderId);
+        result = cancelOrder(body.orderId, body.demandePar);
+        break;
+      case 'signOrder':
+        result = signOrder(body.orderId, body.demandePar);
         break;
       case 'saveDraft':
         result = saveDraft(body);
@@ -1293,7 +1874,7 @@ function doPost(e) {
         result = getDraft(body.draftId);
         break;
       case 'deleteDraft':
-        result = deleteDraft(body.draftId);
+        result = deleteDraft(body.draftId, body.demandePar);
         break;
       case 'validateDraft':
         result = validateDraft(body.draftId);
@@ -1303,6 +1884,9 @@ function doPost(e) {
         break;
       case 'removeFournisseur':
         result = supprimerFournisseur(body.anneeLong, body.site, body.creePar, body.nomFournisseur);
+        break;
+      case 'verifierConnexion':
+        result = verifierConnexion(body.identifiant, body.code);
         break;
       default:
         return jsonResponse({ success: false, error: 'Action inconnue : ' + action });
@@ -1331,6 +1915,7 @@ function openSiteSheet(anneeLong, siteKey) {
  * une ligne de formules dans Récapitulatif.
  */
 function ajouterFournisseur(anneeLong, siteKey, creePar, nomFournisseur) {
+  verifierPasLectureSeule(creePar);
   verifierPermissionSite(creePar, siteKey);
   if (!nomFournisseur || !nomFournisseur.trim()) throw new Error('Nom de fournisseur manquant.');
 
@@ -1430,6 +2015,7 @@ function ajouterFournisseur(anneeLong, siteKey, creePar, nomFournisseur) {
  * complètement indépendant de ces Sheets).
  */
 function supprimerFournisseur(anneeLong, siteKey, creePar, nomFournisseur) {
+  verifierPasLectureSeule(creePar);
   verifierPermissionSite(creePar, siteKey);
 
   const ss = openSiteSheet(anneeLong, siteKey);
@@ -1533,6 +2119,35 @@ function listFournisseurs(anneeLong, siteKey) {
  * que la migration de la colonne Quantité s'est bien faite comme sur
  * les autres onglets.
  */
+/**
+ * FONCTION DE DIAGNOSTIC TEMPORAIRE — vérifie ce que
+ * getQuantitesDejaCommandees() renvoie réellement pour Grosseron/
+ * Tocqueville/2026-2027, et pourquoi.
+ */
+function diagnosticDejaCommandeGrosseron() {
+  const anneeLong = '2026-2027';
+  const siteKey = 'tocqueville';
+  const fournisseur = 'Grosseron';
+
+  const cmdSheet = getRegistreSheet('Commandes');
+  const cmdValeurs = cmdSheet.getDataRange().getValues();
+  Logger.log('Nombre de lignes dans Commandes : ' + cmdValeurs.length);
+
+  let ligneTrouvee = false;
+  for (let i = 1; i < cmdValeurs.length; i++) {
+    const row = cmdValeurs[i];
+    if (!row[0]) continue;
+    if (String(row[3]) !== fournisseur) continue; // filtre juste sur le fournisseur, pour tout voir
+    ligneTrouvee = true;
+    Logger.log('Ligne ' + (i + 1) + ' | ID=' + row[0] + ' | Site="' + row[2] + '" | Fournisseur="' + row[3] + '" | Statut="' + row[8] + '" | Année="' + row[11] + '"');
+    Logger.log('  -> Site correspond ? ' + (String(row[2]) === siteKey) + ' | Année correspond ? ' + (String(row[11]) === anneeLong) + ' | Pas annulée ? ' + (String(row[8]) !== 'Annulée'));
+  }
+  if (!ligneTrouvee) { Logger.log('Aucune ligne "Grosseron" trouvée dans Commandes du tout.'); return; }
+
+  const resultat = getQuantitesDejaCommandees(anneeLong, siteKey, fournisseur);
+  Logger.log('Résultat getQuantitesDejaCommandees : ' + JSON.stringify(resultat));
+}
+
 function diagnosticColonnesAmazone() {
   const ss = openSiteSheet('2026-2027', 'tocqueville');
   let sheet = ss.getSheetByName('Amazone');
@@ -1605,7 +2220,6 @@ function diagnosticListProduits() {
   const values = sheet.getDataRange().getValues();
   Logger.log('Nombre de lignes brutes lues : ' + values.length);
 
-  const normalizeText = s => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
   const IGNORED = ['designation produit', 'total ht', 'dont consommable', 'dont investissement',
                    'dont maintenance', 'dont projet-pta', 'dont abonnement', 'dont epreuves'];
 
@@ -1616,7 +2230,7 @@ function diagnosticListProduits() {
     else {
       const designationNorm = normalizeText(designationRaw);
       if (IGNORED.indexOf(designationNorm) !== -1) raison = 'filtrée : dans IGNORED ("' + designationNorm + '")';
-      else if (designationRaw.startsWith('(')) raison = 'filtrée : commence par (';
+      else if (designationNorm === normalizeText('(Désignation complète)')) raison = 'filtrée : légende exacte "(Désignation complète)"';
       else if (designationNorm.includes('texte bleu')) raison = 'filtrée : contient "texte bleu"';
       else if (designationRaw.includes(' — ') || designationRaw.includes(' - Saint') || designationRaw.includes(' - Tocqueville')) raison = 'filtrée : tiret cadratin ou " - Saint/Tocqueville"';
       else if (normalizeText(String(row[2] || '')) === 'reference') raison = 'filtrée : colonne Référence = "reference"';
@@ -1648,9 +2262,6 @@ function listProduits(anneeLong, siteKey, fournisseur) {
   }
 
   const values = sheet.getDataRange().getValues();
-  const normalizeText = s => String(s)
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // retire les accents
-    .trim().toLowerCase();
 
   // ── Lecture dynamique des colonnes par nom d'en-tête (ligne 3) ──
   // Certains onglets ont une structure légèrement différente des autres
@@ -1683,6 +2294,11 @@ function listProduits(anneeLong, siteKey, fournisseur) {
   const IGNORED = ['designation produit', 'total ht', 'dont consommable', 'dont investissement',
                    'dont maintenance', 'dont projet-pta', 'dont abonnement', 'dont epreuves'];
 
+  // Croise avec le registre pour savoir quels produits ont déjà été
+  // commandés (toutes commandes non annulées confondues) pour ce
+  // site/fournisseur/année — sert à colorer la liste côté appli.
+  const quantitesDejaCommandees = getQuantitesDejaCommandees(anneeLong, siteKey, fournisseur);
+
   const items = [];
   values.forEach(row => {
     const designationRaw = String(row[idxDesignation] || '').trim();
@@ -1690,7 +2306,7 @@ function listProduits(anneeLong, siteKey, fournisseur) {
 
     const designationNorm = normalizeText(designationRaw);
     if (IGNORED.indexOf(designationNorm) !== -1) return;           // ligne d'en-tête "Désignation produit"
-    if (designationRaw.startsWith('(')) return;                     // ligne légende type "(Désignation complète)"
+    if (designationNorm === normalizeText('(Désignation complète)')) return; // ligne légende du modèle — correspondance EXACTE (pas "commence par (") pour ne pas exclure les vrais noms chimiques comme "(-)-Menthone", "(S)-Carvone"
     if (designationNorm.includes('texte bleu')) return;             // ligne légende code couleur
     if (designationRaw.includes(' — ') || designationRaw.includes(' - Saint') || designationRaw.includes(' - Tocqueville')) return; // ligne titre "FOURNISSEUR — Site"
     if (idxReference !== -1 && normalizeText(String(row[idxReference] || '')) === 'reference') return; // sécurité : ligne d'en-tête
@@ -1700,6 +2316,8 @@ function listProduits(anneeLong, siteKey, fournisseur) {
     const quantitePrev = idxQuantite !== -1 ? (parseFloat(row[idxQuantite]) || 1) : 1;
     const prixUnitaireHT = idxPrixHT !== -1 ? (parseFloat(row[idxPrixHT]) || 0) : 0;
     const prixUnitaireTTC = idxPrixTTC !== -1 ? (parseFloat(row[idxPrixTTC]) || 0) : 0;
+    const quantiteDejaCommandee = quantitesDejaCommandees[designationNorm] || 0;
+    const quantiteRestante = Math.max(0, quantitePrev - quantiteDejaCommandee);
 
     items.push({
       designation: designationRaw,
@@ -1709,10 +2327,81 @@ function listProduits(anneeLong, siteKey, fournisseur) {
       prixUnitaireTTC: prixUnitaireTTC,
       quantitePrev: quantitePrev,
       codeAnalytique: idxCodeAnalytique !== -1 ? String(row[idxCodeAnalytique] || '') : '',
-      typeDepense: idxTypeDepense !== -1 ? String(row[idxTypeDepense] || '') : ''
+      typeDepense: idxTypeDepense !== -1 ? String(row[idxTypeDepense] || '') : '',
+      quantiteDejaCommandee: quantiteDejaCommandee,
+      quantiteRestante: quantiteRestante
     });
   });
   return items;
+}
+
+/**
+ * Renvoie, pour un site/fournisseur/année donnés, la quantité déjà
+ * commandée par désignation (normalisée), cumulée sur toutes les
+ * commandes non annulées. Sert à comparer à la quantité prévisionnelle
+ * côté appli : rien commandé / commandé en partie / totalement couvert.
+ */
+function getQuantitesDejaCommandees(anneeLong, siteKey, fournisseur) {
+  const cache = CacheService.getScriptCache();
+  const cleCache = 'dejaCmd_' + anneeLong + '_' + siteKey + '_' + fournisseur;
+
+  const enCache = cache.get(cleCache);
+  if (enCache) {
+    try { return JSON.parse(enCache); }
+    catch (e) { /* cache corrompu, on recalcule normalement */ }
+  }
+
+  const resultat = {}; // désignation normalisée -> quantité cumulée
+  try {
+    const cmdSheet = getRegistreSheet('Commandes');
+    const cmdValeurs = cmdSheet.getDataRange().getValues();
+    const orderIdsConcernes = new Set();
+    for (let i = 1; i < cmdValeurs.length; i++) {
+      const row = cmdValeurs[i];
+      if (!row[0]) continue;
+      if (String(row[2]) !== siteKey) continue;
+      if (String(row[3]) !== fournisseur) continue;
+      if (String(row[11]) !== anneeLong) continue;
+      if (String(row[8]) === 'Annulée') continue;
+      orderIdsConcernes.add(String(row[0]));
+    }
+    if (orderIdsConcernes.size > 0) {
+      const detailSheet = getRegistreSheet('Détail');
+      const detailValeurs = detailSheet.getDataRange().getValues();
+      for (let i = 1; i < detailValeurs.length; i++) {
+        const row = detailValeurs[i];
+        if (!orderIdsConcernes.has(String(row[0]))) continue;
+        const designation = String(row[1] || '').trim();
+        if (!designation) continue;
+        const cle = normalizeText(designation);
+        const quantite = parseFloat(row[3]) || 0; // colonne 4 = Quantité commandée
+        resultat[cle] = (resultat[cle] || 0) + quantite;
+      }
+    }
+  } catch (err) {
+    Logger.log('Erreur getQuantitesDejaCommandees : ' + err.message);
+  }
+
+  // Mis en cache 2 minutes — évite de rescanner tout le registre à
+  // chaque clic sur ce fournisseur pendant ce délai. Si le cache
+  // dépasse la limite de taille (100 Ko), on continue sans bloquer.
+  try { cache.put(cleCache, JSON.stringify(resultat), 120); }
+  catch (e) { Logger.log('Cache non enregistré (probablement trop volumineux) : ' + e.message); }
+
+  return resultat;
+}
+
+/**
+ * Invalide le cache "déjà commandé" pour un site/fournisseur/année
+ * donnés — appelé après l'enregistrement d'une nouvelle commande, pour
+ * que le code couleur reflète immédiatement le changement plutôt que
+ * d'attendre jusqu'à 2 minutes.
+ */
+function invaliderCacheDejaCommandees(anneeLong, siteKey, fournisseur) {
+  try {
+    const cache = CacheService.getScriptCache();
+    cache.remove('dejaCmd_' + anneeLong + '_' + siteKey + '_' + fournisseur);
+  } catch (e) { /* pas grave si ça échoue, le cache expirera de toute façon */ }
 }
 
 function jsonResponse(obj) {

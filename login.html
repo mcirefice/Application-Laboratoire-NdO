@@ -135,6 +135,8 @@ body {
         <option value="c.druot">c.druot</option>
         <option value="m.duponchel">m.duponchel</option>
         <option value="p.parisot">p.parisot</option>
+        <option value="chefetablissement">chefetablissement</option>
+        <option value="comptabilite">comptabilite</option>
       </select>
     </div>
 
@@ -157,34 +159,14 @@ body {
 </div>
 
 <script>
-// Hashage SHA-256
-async function hashPassword(password) {
-  const msgBuffer = new TextEncoder().encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// Mots de passe hashés (inchangés)
-const users = {
-  'm.cirefice':  '8f6ec7399c60711e35b9051a190f867dec9072fcd097d9ab6f23e7fe2955ad2b',
-  'a.abidi':     'ef5a36ca66e6d323e2a0521169fe3e3a8b5452695abf87a4ec6b4f0f4b09bdfa',
-  'm.steuf':     '4f89245fe5e0d0c4429cbbc7587ebb19a6bd0b22252ba7bd7cb76b3b043a9fb7',
-  'k.ovey':      'b49b0b5d2c80e955952feff090c320843d72be2d35c173d02708ab6e17e65015',
-  'c.druot':     'e2f0a238939b2dd9ae4357f4bd777d4a9a48a0bd886462b526fd04b60606bed6',
-  'm.duponchel': '30efe80096f05c95a695dfc5eeaa42cc93fb014fec61afd4f36d5f0134802f16',
-  'p.parisot':   '2c866d3c9bd1bde6658a8164ceed15602e442abdcc89cf4f16b5251217a4b5c0'
-};
-
-// Rôles — DDFPT = m.cirefice uniquement
-const roles = {
-  'm.cirefice': 'ddfpt'
-};
+// URL du script Code_Commandes.gs — même déploiement que commandes.html/suivi.html.
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfGX4oJE2sUscTbEdH3vb5rpYhqIg8xuywWamfaRoyUw7EC0dqSGrblDC8LFon0VfO/exec';
 
 const loginForm     = document.getElementById('loginForm');
 const errorMessage  = document.getElementById('errorMessage');
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
+const submitButton  = loginForm.querySelector('button[type="submit"]');
 
 loginForm.addEventListener('submit', async function(e) {
   e.preventDefault();
@@ -198,22 +180,38 @@ loginForm.addEventListener('submit', async function(e) {
     return;
   }
 
-  const hashedPassword = await hashPassword(password);
+  submitButton.disabled = true;
+  submitButton.textContent = 'Connexion...';
 
-  if (users[username] && users[username] === hashedPassword) {
-    // Connexion réussie — on aligne les clés localStorage pour toute l'appli
-    localStorage.setItem('loggedUser', username);   // clé historique (dashboard)
-    localStorage.setItem('labUser', username);       // clé utilisée dans commandes/budget
-    localStorage.setItem('labRole', roles[username] || 'technicien');
+  try {
+    // Vérification côté serveur, contre l'onglet "Techniciens" du
+    // registre — le code n'est jamais stocké ni visible dans le code
+    // source de cette page (contrairement à l'ancien système de mots
+    // de passe hashés codés en dur ici).
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'verifierConnexion', identifiant: username, code: password })
+    });
+    const res = await response.json();
+
+    if (!res.success) throw new Error(res.error || 'Identifiant ou code incorrect');
+
+    localStorage.setItem('loggedUser', res.data.identifiant); // clé historique
+    localStorage.setItem('labUser', res.data.identifiant);     // clé utilisée dans commandes/budget
+    localStorage.setItem('labRole', res.data.niveau);           // "DDFPT" / "Technicien" / "Lecture seule"
     localStorage.setItem('loginTime', new Date().toISOString());
 
     loginForm.style.opacity = '0';
     setTimeout(() => { window.location.href = 'modules/dechets.html'; }, 300);
-  } else {
-    errorMessage.textContent = 'Code d\'accès incorrect';
+  } catch (err) {
+    errorMessage.textContent = err.message;
     errorMessage.classList.add('show');
     passwordInput.value = '';
     setTimeout(() => errorMessage.classList.remove('show'), 3000);
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = 'Se connecter';
   }
 });
 

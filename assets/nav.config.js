@@ -17,7 +17,8 @@ const NAV_MODULES = [
     { id: 'maintenance',   label: '🛠️ Maintenance',                  file: 'maintenance.html' },
     { id: 'commandes',     label: '📦 Commandes',                     file: 'commandes.html' },
     { id: 'suivi',         label: '📋 Suivi Commandes',               file: 'suivi.html' },
-    { id: 'budget',        label: '📊 Budget & Suivi',                file: 'budget.html' }
+    { id: 'budget',        label: '📊 Budget & Suivi',                file: 'budget.html' },
+    { id: 'frais',         label: '🧾 Frais',                         file: 'frais.html' }
 ];
 
 /* Architecture V2 : chaque module est une page autonome dans /modules/,

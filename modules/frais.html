@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratoire - Frais</title>
+    <link rel="stylesheet" href="../assets/common.css">
+    <style>
+        .sub-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 25px; justify-content: center; }
+        .sub-tabs .type-btn { flex: 1 1 180px; max-width: 260px; }
+        .pane { display: none; }
+        .pane.active { display: block; }
+        .toolbar { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; background: #f8f9fa; padding: 16px 20px; border-radius: 15px; margin-bottom: 20px; }
+        .toolbar .input-group { margin-bottom: 0; min-width: 150px; }
+        textarea { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; font-family: inherit; resize: vertical; }
+        .hint { color: #888; font-size: 13px; }
+
+        /* Choix du type de frais */
+        .type-choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 18px; }
+        .type-card { border: 2px solid #e0e0e0; border-radius: 14px; padding: 14px 16px; cursor: pointer; background: #f8f9fa; transition: all .2s; text-align: left; font-family: inherit; }
+        .type-card:hover { border-color: #667eea; }
+        .type-card.active { border-color: #667eea; background: linear-gradient(135deg, rgba(102,126,234,.12), rgba(118,75,162,.12)); box-shadow: 0 4px 12px rgba(102,126,234,.25); }
+        .type-card .tc-t { font-weight: 800; font-size: 16px; color: #333; }
+        .type-card .tc-s { font-size: 12px; color: #666; margin-top: 4px; }
+        .doc-badge { display: inline-block; margin-top: 8px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: #fff; border: 1px solid #c7d2fe; color: #4c51bf; }
+        .bloc { display: none; }
+        .bloc.show { display: block; }
+        .section-label { font-weight: 700; color: #333; display: block; margin: 8px 0 8px; }
+
+        /* Tableaux de saisie */
+        .art-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .art-table th { text-align: left; color: #667eea; font-size: 13px; padding: 6px; border-bottom: 2px solid #e0e0e0; }
+        .art-table td { padding: 5px 4px; vertical-align: middle; }
+        .art-table input, .art-table select { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; background: white; }
+        .art-table .c-qte { width: 80px; } .art-table .c-unite { width: 90px; } .art-table .c-prix { width: 110px; } .art-table .c-del { width: 40px; } .art-table .c-nat { width: 140px; }
+        .btn-mini { background: #f1f5f9; border: 2px solid #e0e0e0; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 14px; }
+        .btn-mini:hover { border-color: #667eea; color: #667eea; }
+        .btn-del { background: none; border: none; font-size: 18px; cursor: pointer; color: #b91c1c; }
+        .total-live { font-size: 20px; font-weight: 700; color: #333; text-align: right; margin-top: 12px; }
+        .calc-km { background: #f8f9ff; border-radius: 12px; padding: 12px 16px; margin: 6px 0 14px; font-size: 14px; color: #444; }
+        .check { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #333; cursor: pointer; margin: 6px 0; }
+        .check input { width: 20px; height: 20px; }
+        .photo-zone { border: 2px dashed #c7d2fe; border-radius: 12px; padding: 16px; text-align: center; background: #f8f9ff; }
+        .photo-zone { box-sizing: border-box; overflow: hidden; }
+        .photo-zone input { width: 100%; max-width: 100%; box-sizing: border-box; }
+        .form-row > .input-group { min-width: 0; }
+        .photos-list { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 10px; }
+        .photo-item { position: relative; width: 110px; }
+        .photo-item img { width: 110px; height: 140px; object-fit: contain; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; }
+        .photo-item .pdf-ph { width: 110px; height: 140px; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 12px; padding: 6px; text-align: center; word-break: break-all; }
+        .photo-item button { position: absolute; top: -8px; right: -8px; width: 26px; height: 26px; border-radius: 50%; border: none; background: #b91c1c; color: #fff; cursor: pointer; font-weight: 700; }
+        .btn-photo { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 11px 18px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 14px; }
+        .photo-links a { text-decoration: none; font-size: 15px; margin-right: 2px; }
+        .btn-add-photo { background: #eef0fb; border: 1px dashed #667eea; color: #4c51bf; border-radius: 8px; padding: 3px 8px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 998; padding: 16px; }
+        .overlay.show { display: flex; }
+        .modal { background: #fff; border-radius: 16px; padding: 20px; max-width: 520px; width: 100%; max-height: 90vh; overflow: auto; }
+        .modal h3 { color: #667eea; margin-bottom: 8px; }
+        .edit-banner { background: #fef3c7; color: #92400e; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; display: none; font-weight: 600; }
+        .link-small { font-size: 13px; color: #667eea; font-weight: 600; text-decoration: none; }
+        details.compteurs summary { cursor: pointer; color: #667eea; font-weight: 600; font-size: 14px; margin: 4px 0 10px; }
+
+        /* Cartes personnes */
+        .person-card { background: white; border-radius: 14px; padding: 18px 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.08); margin-bottom: 16px; border-left: 5px solid #94a3b8; }
+        .person-card.pret { border-left-color: #10b981; }
+        .person-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .person-name { font-weight: 700; font-size: 17px; color: #333; }
+        .person-sub { color: #888; font-size: 13px; }
+        .person-total { font-size: 20px; font-weight: 800; color: #333; }
+        .doc-block { border: 1px solid #eef0fb; background: #fcfcff; border-radius: 12px; padding: 12px 14px; margin-top: 12px; }
+        .doc-block h4 { color: #4c51bf; font-size: 14px; margin-bottom: 6px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .jauge { height: 10px; background: #f1f5f9; border-radius: 6px; overflow: hidden; margin: 8px 0 4px; }
+        .jauge > div { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 6px; }
+        .jauge.ok > div { background: linear-gradient(90deg, #10b981, #059669); }
+        .frais-line { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; flex-wrap: wrap; }
+        .frais-line:last-child { border-bottom: none; }
+        .frais-line.annexe { padding-left: 34px; font-size: 13px; color: #555; }
+        .frais-line input[type=checkbox] { width: 20px; height: 20px; }
+        .frais-line .fl-main { flex: 1; min-width: 180px; }
+        .frais-line .fl-sub { color: #888; font-size: 12px; }
+        .frais-line .fl-amt { font-weight: 700; white-space: nowrap; }
+        .tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-right: 4px; }
+        .tag-achat { background: #ecfdf5; color: #047857; } .tag-dep { background: #eff6ff; color: #1d4ed8; } .tag-voit { background: #fdf4ff; color: #a21caf; }
+        .icon-btn { background: none; border: none; cursor: pointer; font-size: 17px; padding: 4px; text-decoration: none; }
+        .actions-row { margin-top: 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+        .btn-go { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 11px 20px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; }
+        .btn-go:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .btn-violet { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 9px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
+        .btn-light { background: white; border: 2px solid #e0e0e0; padding: 7px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; color: #333; text-decoration: none; display: inline-block; }
+        .btn-light:hover { border-color: #667eea; color: #667eea; }
+        .btn-danger { background: white; border: 2px solid #fecaca; color: #b91c1c; padding: 7px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .link-force { background: none; border: none; color: #667eea; text-decoration: underline; cursor: pointer; font-size: 13px; }
+
+        /* Feuilles */
+        .alert-valider { background: #fef3c7; color: #92400e; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-weight: 700; cursor: pointer; display: none; }
+        .sheet-card { background: white; border-radius: 14px; padding: 16px 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.08); margin-bottom: 12px; border-left: 5px solid #f59e0b; }
+        .sheet-card.st-signee { border-left-color: #3b82f6; } .sheet-card.st-remise { border-left-color: #8b5cf6; }
+        .sheet-card.st-remboursee { border-left-color: #10b981; } .sheet-card.st-annulee { border-left-color: #991b1b; opacity: .6; }
+        .sheet-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .b-attente { background: #f1f5f9; color: #475569; } .b-avalider { background: #fef3c7; color: #92400e; }
+        .b-signee { background: #dbeafe; color: #1d4ed8; } .b-remise { background: #ede9fe; color: #6d28d9; }
+        .b-remboursee { background: #d1fae5; color: #065f46; } .b-annulee { background: #fee2e2; color: #991b1b; }
+        .b-doc { background: #eef0fb; color: #4c51bf; }
+        .wait-ddfpt { font-size: 13px; color: #92400e; font-weight: 600; }
+
+        /* Archive */
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .stat { background: white; border-radius: 12px; padding: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.06); }
+        .stat .v { font-size: 22px; font-weight: 800; color: #333; }
+        .stat .l { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: .03em; }
+        .table-wrap { overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.06); }
+        table.data { width: 100%; border-collapse: collapse; font-size: 14px; }
+        table.data th { background: #f8f9fa; padding: 10px; text-align: left; color: #667eea; border-bottom: 2px solid #e0e0e0; font-size: 13px; white-space: nowrap; }
+        table.data td { padding: 9px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+        table.data td.num { text-align: right; white-space: nowrap; }
+        .empty-msg { text-align: center; color: #999; padding: 30px; }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 22px; border-radius: 10px; font-weight: 600; z-index: 999; display: none; max-width: 90vw; text-align: center; }
+        .toast.err { background: #b91c1c; }
+
+        @media (max-width: 640px) {
+            .art-table thead { display: none; }
+            .art-table tr { display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 6px; padding: 8px 0; border-bottom: 1px solid #eee; }
+            .art-table td:first-child { grid-column: 1 / -1; }
+            .art-table.annexes tr { grid-template-columns: 1fr 1fr 40px; }
+            .art-table.annexes td:first-child { grid-column: auto; }
+            .art-table.annexes td.c-desc { grid-column: 1 / -1; order: 5; }
+            .art-table .c-qte, .art-table .c-unite, .art-table .c-prix, .art-table .c-del, .art-table .c-nat { width: auto; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <div class="header-top">
+                <div class="header-left"><img src="../logo-notre-dame.png" alt="Notre-Dame Les Oiseaux"></div>
+                <div class="header-center"><div><h1>🔬 Laboratoire</h1><p>Tableau de bord - Gestion d'équipe</p></div></div>
+                <div class="header-right"><img src="../logo-ndo-sup.png" alt="NDO Sup"></div>
+            </div>
+            <div class="user-info">
+                <span class="user-badge" id="userBadge">Utilisateur</span>
+                <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
+            </div>
+        </div>
+
+        <div class="tabs-container">
+            <div class="tabs-nav" id="tabsNav"></div>
+            <div class="tab-content">
+                <div class="content-section active" id="sectionFrais">
+                    <h2 style="color:#667eea;margin-bottom:20px;text-align:center;">🧾 Gestion des Frais</h2>
+
+                    <div class="sub-tabs">
+                        <button class="type-btn" data-pane="saisie" data-hide-lecture-seule onclick="showPane('saisie')">➕ Saisir un frais</button>
+                        <button class="type-btn" data-pane="attente" onclick="showPane('attente')">👥 À rembourser</button>
+                        <button class="type-btn" data-pane="feuilles" onclick="showPane('feuilles')">📄 Feuilles <span id="nbAValider"></span></button>
+                        <button class="type-btn" data-pane="archive" onclick="showPane('archive')">🗂️ Archive & regroupement</button>
+                    </div>
+
+                    <div id="loading" class="loading-message"><div class="spinner"></div><p>Chargement des frais…</p></div>
+                    <div id="erreurGlobale" class="error-message-box" style="display:none"></div>
+
+                    <!-- ════════ SAISIE ════════ -->
+                    <div class="pane" id="pane-saisie">
+                        <div class="calc-card" id="formCard">
+                            <div class="edit-banner" id="editBanner"></div>
+
+                            <label class="section-label">Type de frais *</label>
+                            <div class="type-choice" id="typeChoice">
+                                <button type="button" class="type-card" data-type="Achat" onclick="choisirType('Achat')">
+                                    <div class="tc-t">🛒 Achat</div>
+                                    <div class="tc-s">Fruits, huiles, petites fournitures… cumulés jusqu'à <span class="seuilTxt">20 €</span></div>
+                                    <span class="doc-badge">→ Note de frais Notre-Dame (partie A)</span>
+                                </button>
+                                <button type="button" class="type-card" data-type="Déplacement" onclick="choisirType('Déplacement')">
+                                    <div class="tc-t">🚆 Déplacement</div>
+                                    <div class="tc-s">Train, avion, taxi, parking, péage, hôtel, métro, divers</div>
+                                    <span class="doc-badge">→ Note de frais Notre-Dame (partie A)</span>
+                                </button>
+                                <button type="button" class="type-card" data-type="Voiture" onclick="choisirType('Voiture')">
+                                    <div class="tc-t">🚗 Voiture — barème km</div>
+                                    <div class="tc-s">Véhicule personnel, barème kilométrique en vigueur (+ péages/parkings du trajet)</div>
+                                    <span class="doc-badge">→ Fiche Frais kilométriques</span>
+                                </button>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="input-group">
+                                    <label>Personne à rembourser *</label>
+                                    <select id="fBenef" onchange="onBenefChange()"></select>
+                                    <small><a class="link-small" id="lienListeProfs" href="#" target="_blank" style="display:none">📋 Gérer la liste des professeurs (Google Sheet)</a></small>
+                                </div>
+                                <div class="input-group">
+                                    <label id="lblDate">Date *</label>
+                                    <input type="date" id="fDate">
+                                </div>
+                                <div class="input-group">
+                                    <label>Site</label>
+                                    <select id="fSite"><option value="tocqueville">Tocqueville</option><option value="saintpierre">Saint-Pierre</option></select>
+                                </div>
+                            </div>
+
+                            <div id="nouveauProf" style="display:none;background:#f8f9ff;border-radius:12px;padding:14px;margin-bottom:16px;">
+                                <div class="form-row">
+                                    <div class="input-group"><label>Nom du professeur *</label><input type="text" id="npNom" placeholder="Ex : Mme Martin"></div>
+                                    <div class="input-group"><label>Discipline</label><select id="npDisc"></select></div>
+                                </div>
+                                <button class="btn-mini" onclick="ajouterProf()">✅ Ajouter à la liste</button>
+                            </div>
+
+                            <!-- ── Achat ── -->
+                            <div class="bloc" id="blocAchat">
+                                <div class="form-row">
+                                    <div class="input-group"><label>Discipline</label><select id="fDisc" class="selDisc"></select></div>
+                                    <div class="input-group"><label>Magasin</label><input type="text" id="fMagasin" list="dlMagasins" placeholder="Ex : Carrefour, Métro…"></div>
+                                    <div class="input-group"><label>Catégorie</label><select id="fCat"></select></div>
+                                </div>
+                                <label class="section-label">Articles achetés *</label>
+                                <table class="art-table">
+                                    <thead><tr><th>Désignation</th><th class="c-qte">Qté</th><th class="c-unite">Unité</th><th class="c-prix">Prix TTC (€)</th><th class="c-del"></th></tr></thead>
+                                    <tbody id="artBody"></tbody>
+                                </table>
+                                <button class="btn-mini" style="margin-top:8px" onclick="addArticle()">➕ Ajouter un article</button>
+                                <p class="hint" style="margin-top:6px">Reprenez les mêmes désignations d'un achat à l'autre (propositions automatiques) : le regroupement pour les achats de début d'année (Métro…) sera plus fiable.</p>
+                                <div class="input-group" id="montantManuelZone" style="display:none;margin-top:12px;max-width:260px;">
+                                    <label>Montant total TTC du ticket (€) *</label>
+                                    <input type="text" inputmode="decimal" id="fMontant" placeholder="Ex : 7,45">
+                                    <small>Aucun prix par article : indiquez le total du ticket.</small>
+                                </div>
+                            </div>
+
+                            <!-- ── Déplacement ── -->
+                            <div class="bloc" id="blocDeplacement">
+                                <div class="form-row">
+                                    <div class="input-group"><label>Nature *</label><select id="dNature" class="selNature"></select></div>
+                                    <div class="input-group"><label>Montant TTC (€) *</label><input type="text" inputmode="decimal" id="dMontant" placeholder="Ex : 24,60"></div>
+                                    <div class="input-group"><label>Discipline / motif</label><select id="dDisc" class="selDisc"></select></div>
+                                </div>
+                                <div class="input-group"><label>Description *</label><input type="text" id="dDesc" placeholder="Ex : Paris – Lyon, salon Educatec"></div>
+                            </div>
+
+                            <!-- ── Voiture ── -->
+                            <div class="bloc" id="blocVoiture">
+                                <div class="form-row">
+                                    <div class="input-group"><label>Départ (de) *</label><input type="text" id="vDe" placeholder="Ex : NDO"></div>
+                                    <div class="input-group"><label>Arrivée (à) *</label><input type="text" id="vA" placeholder="Ex : Poissy"></div>
+                                    <div class="input-group"><label>Discipline / motif</label><select id="vDisc" class="selDisc"></select></div>
+                                </div>
+                                <div class="input-group"><label>Commentaire (client, projet, réunion…)</label><input type="text" id="vComment" placeholder="Ex : Intervention Lycée Charles de Gaulle"></div>
+                                <div class="form-row">
+                                    <div class="input-group"><label>Distance (km) *</label><input type="text" inputmode="decimal" id="vKm" placeholder="Ex : 24" oninput="majTotal()"></div>
+                                    <div class="input-group"><label>Puissance fiscale *</label><select id="vCV" onchange="majTotal()"></select></div>
+                                    <div class="input-group"><label>&nbsp;</label>
+                                        <label class="check"><input type="checkbox" id="vAR" onchange="majTotal()"> Aller-retour (× 2)</label>
+                                        <label class="check"><input type="checkbox" id="vElec" onchange="majTotal()"> Véhicule électrique</label>
+                                    </div>
+                                </div>
+                                <details class="compteurs" id="vCompteurs">
+                                    <summary>Relevés de compteur (facultatif — remplace la distance)</summary>
+                                    <div class="form-row">
+                                        <div class="input-group"><label>Compteur au départ</label><input type="text" inputmode="numeric" id="vDep" oninput="majTotal()"></div>
+                                        <div class="input-group"><label>Compteur à l'arrivée</label><input type="text" inputmode="numeric" id="vArr" oninput="majTotal()"></div>
+                                    </div>
+                                </details>
+                                <div class="calc-km" id="calcKm"></div>
+                                <label class="section-label">Péages, parkings… de ce trajet (facultatif)</label>
+                                <table class="art-table annexes">
+                                    <thead><tr><th class="c-nat">Nature</th><th>Description</th><th class="c-prix">Montant TTC</th><th class="c-del"></th></tr></thead>
+                                    <tbody id="annexeBody"></tbody>
+                                </table>
+                                <button class="btn-mini" style="margin-top:8px" onclick="addAnnexe()">➕ Ajouter un péage / parking</button>
+                            </div>
+
+                            <div class="total-live" id="totalLive">Total : 0,00 €</div>
+
+                            <div class="form-row" style="margin-top:16px">
+                                <div class="input-group">
+                                    <label id="lblPhoto">Photos des tickets / justificatifs (conseillé)</label>
+                                    <div class="photo-zone">
+                                        <label class="btn-photo">📷 Photographier / choisir
+                                            <input type="file" id="fPhoto" accept="image/*,application/pdf" multiple onchange="onPhoto(event)" style="display:none">
+                                        </label>
+                                        <label class="check" style="justify-content:center;margin-top:10px"><input type="checkbox" class="optScan" onchange="setModeScan(this.checked)"> ✨ Mode scan (recadrage + noir & blanc)</label>
+                                        <div class="hint">Plusieurs photos possibles (ticket long, péage + parking…). Posez le ticket sur un fond sombre pour un meilleur recadrage.</div>
+                                        <div class="photos-list" id="photoPreview"></div>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label>Remarques</label>
+                                    <textarea id="fComment" rows="4" placeholder="Ex : TP dissection 1re STL"></textarea>
+                                </div>
+                            </div>
+
+                            <div id="cumulInfo" class="result-box" style="margin-bottom:14px"></div>
+                            <button class="btn-calculate" id="btnSave" onclick="enregistrer()">💾 Enregistrer le frais</button>
+                            <button class="btn-light" id="btnCancelEdit" style="display:none;margin-top:10px;width:100%" onclick="resetForm()">Annuler la modification</button>
+                        </div>
+                    </div>
+
+                    <!-- ════════ À REMBOURSER ════════ -->
+                    <div class="pane" id="pane-attente">
+                        <p class="hint" style="text-align:center;margin-bottom:16px">Frais en attente, par personne. Achats : note éditable dès <strong class="seuilTxt">20 €</strong>. Déplacements et voiture : éditables directement. Chaque feuille part ensuite en validation DDFPT.</p>
+                        <div id="listeAttente"></div>
+                    </div>
+
+                    <!-- ════════ FEUILLES ════════ -->
+                    <div class="pane" id="pane-feuilles">
+                        <div class="alert-valider" id="alertValider" onclick="document.getElementById('feuStatut').value='À valider';renderFeuilles()"></div>
+                        <div class="toolbar">
+                            <div class="input-group"><label>Année scolaire</label><select id="feuAnnee" onchange="renderFeuilles()"></select></div>
+                            <div class="input-group"><label>Document</label>
+                                <select id="feuType" onchange="renderFeuilles()"><option value="">Tous</option><option>Note de frais</option><option>Frais kilométriques</option></select>
+                            </div>
+                            <div class="input-group"><label>Statut</label>
+                                <select id="feuStatut" onchange="renderFeuilles()">
+                                    <option value="">Tous</option><option>À valider</option><option>Signée</option>
+                                    <option>Remise compta</option><option>Remboursée</option><option>Annulée</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="listeFeuilles"></div>
+                    </div>
+
+                    <!-- ════════ ARCHIVE ════════ -->
+                    <div class="pane" id="pane-archive">
+                        <div class="toolbar">
+                            <div class="input-group"><label>Année scolaire</label><select id="arAnnee" onchange="renderArchive()"></select></div>
+                            <div class="input-group"><label>Type</label>
+                                <select id="arType" onchange="renderArchive()"><option value="">Tous</option><option>Achat</option><option>Déplacement</option><option>Voiture</option></select>
+                            </div>
+                            <div class="input-group"><label>Site</label>
+                                <select id="arSite" onchange="renderArchive()"><option value="">Tous</option><option value="tocqueville">Tocqueville</option><option value="saintpierre">Saint-Pierre</option></select>
+                            </div>
+                            <div class="input-group"><label>Discipline</label><select id="arDisc" onchange="renderArchive()"></select></div>
+                            <div class="input-group"><label>Catégorie</label><select id="arCat" onchange="renderArchive()"></select></div>
+                            <div class="input-group"><label>Recherche</label><input type="text" id="arTexte" placeholder="citron, péage…" oninput="renderArchive()"></div>
+                            <div class="input-group"><label>Vue</label>
+                                <select id="arVue" onchange="renderArchive()"><option value="articles">Achats regroupés par article</option><option value="tickets">Tous les frais</option></select>
+                            </div>
+                            <button class="btn-light" onclick="exportCSV()">⬇️ Export CSV</button>
+                        </div>
+                        <div class="stats" id="arStats"></div>
+                        <div class="table-wrap" id="arTable"></div>
+                    </div>
+
+                    <datalist id="dlMagasins"></datalist>
+                    <datalist id="dlArticles"></datalist>
+                    <datalist id="dlLieux"></datalist>
+                    <datalist id="dlUnites"><option>kg</option><option>g</option><option>L</option><option>mL</option><option>pièce(s)</option><option>paquet(s)</option><option>bouteille(s)</option></datalist>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>
+    <div class="overlay" id="ajoutOverlay">
+        <div class="modal">
+            <h3>📷 Ajouter des justificatifs</h3>
+            <p class="hint" id="ajoutInfo"></p>
+            <div style="text-align:center;margin:12px 0">
+                <label class="btn-photo">📷 Photographier / choisir
+                    <input type="file" id="ajoutInput" accept="image/*,application/pdf" multiple onchange="onAjoutPhotos(event)" style="display:none">
+                </label>
+                <label class="check" style="justify-content:center;margin-top:10px"><input type="checkbox" class="optScan" onchange="setModeScan(this.checked)"> ✨ Mode scan (recadrage + noir & blanc)</label>
+            </div>
+            <div class="photos-list" id="ajoutPreview"></div>
+            <div class="actions-row" style="justify-content:flex-end">
+                <button class="btn-light" onclick="fermerAjout()">Annuler</button>
+                <button class="btn-go" id="btnAjout" onclick="envoyerAjout()" disabled>Envoyer</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../assets/nav.config.js"></script>
+    <script src="../assets/common.js"></script>
+    <script>
+        /* ⚠️ URL /exec du déploiement de Code_Frais.gs (format /macros/s/.../exec). */
+        const APPS_SCRIPT_URL_FRAIS = 'https://script.google.com/macros/s/AKfycbxre2ea86iUvUhjpXVqjNG_SKVHNvdeIT7osXL-fTI9Ebfvx0ZXvPQ-3Dvu2SXYGqY/exec';
+
+        const user = initModulePage('frais');
+        const role = getLabRole();
+        const estDDFPT = role === 'DDFPT';
+        const lecture = isLectureSeule();
+
+        let ctx = null, FRAIS = [], FEUILLES = [];
+        let typeCourant = 'Achat';
+        let editId = null;
+        let photosSaisie = [];   // [{ file, img, data:{base64,mimeType,nom}, apercu }]
+        let photosAjout = [], ajoutFraisId = null;
+        let modeScan = true;
+        try { modeScan = localStorage.getItem('fraisModeScan') !== 'non'; } catch (e) {}
+        const decoches = new Set(); // frais décochés dans "À rembourser"
+
+        const SITES = { tocqueville: 'Tocqueville', saintpierre: 'Saint-Pierre' };
+        const TAGS = { 'Achat': 'tag-achat', 'Déplacement': 'tag-dep', 'Voiture': 'tag-voit' };
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const js = v => esc(JSON.stringify(v));
+        const eur = n => (Number(n) || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+        const frDate = iso => iso ? iso.slice(0, 10).split('-').reverse().join('/') : '';
+        const num = v => { const x = parseFloat(String(v ?? '').replace(',', '.').replace(/\s/g, '')); return isNaN(x) ? null : x; };
+        const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+        const $ = id => document.getElementById(id);
+
+        function anneeScolaire(d = new Date()) { const y = d.getFullYear(); return d.getMonth() >= 8 ? `${y}-${y + 1}` : `${y - 1}-${y}`; }
+        function todayISO() { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
+
+        function toast(msg, err = false) {
+            const t = $('toast');
+            t.textContent = msg; t.className = 'toast' + (err ? ' err' : ''); t.style.display = 'block';
+            clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', err ? 6000 : 3500);
+        }
+
+        async function api(action, payload = {}) {
+            if (APPS_SCRIPT_URL_FRAIS.startsWith('COLLER')) throw new Error('URL du script Frais non configurée dans frais.html.');
+            const res = await callAppsScript(APPS_SCRIPT_URL_FRAIS, action, { demandePar: user, ...payload });
+            if (!res.success) throw new Error(res.error || 'Erreur inconnue');
+            return res.data;
+        }
+
+        function showPane(id) {
+            document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + id));
+            document.querySelectorAll('.sub-tabs .type-btn').forEach(b => b.classList.toggle('active', b.dataset.pane === id));
+            try { localStorage.setItem('fraisPane', id); } catch (e) {}
+        }
+
+        /* ───────── Chargement ───────── */
+        async function charger() {
+            try {
+                const [c, f, fe] = await Promise.all([api('getContexte'), api('listFrais'), api('listFeuilles')]);
+                ctx = c; FRAIS = f; FEUILLES = fe;
+                $('loading').style.display = 'none';
+                initSelects();
+                resetForm();
+                renderTout();
+            } catch (e) {
+                $('loading').style.display = 'none';
+                $('erreurGlobale').style.display = 'block';
+                $('erreurGlobale').innerHTML = `<h4>❌ Impossible de charger le module</h4><p>${esc(e.message)}</p>`;
+            }
+        }
+        async function recharger() {
+            const [f, fe] = await Promise.all([api('listFrais'), api('listFeuilles')]);
+            FRAIS = f; FEUILLES = fe;
+            initAnnees(); renderTout();
+        }
+        function renderTout() { renderAttente(); renderFeuilles(); renderArchive(); remplirDatalists(); majCumulInfo(); }
+
+        const opts = (list, all) => (all ? '<option value="">Toutes</option>' : '') + list.map(x => `<option>${esc(x)}</option>`).join('');
+
+        function initSelects() {
+            document.querySelectorAll('.seuilTxt').forEach(e => e.textContent = eur(ctx.seuil));
+            document.querySelectorAll('.selDisc').forEach(e => e.innerHTML = '<option value="">—</option>' + opts(ctx.disciplines));
+            $('npDisc').innerHTML = opts(ctx.disciplines);
+            $('fCat').innerHTML = opts(ctx.categories);
+            $('dNature').innerHTML = '<option value="">— Choisir —</option>' + opts(ctx.natures);
+            $('vCV').innerHTML = '<option value="">— Choisir —</option>' + ctx.bareme.map(b => `<option value="${esc(b.code)}">${esc(b.libelle)} — ${String(b.a).replace('.', ',')} €/km</option>`).join('');
+            $('arDisc').innerHTML = opts(ctx.disciplines, true);
+            $('arCat').innerHTML = opts(ctx.categories, true);
+            document.querySelectorAll('.optScan').forEach(c => c.checked = modeScan);
+            if (!lecture && ctx.listeProfsUrl) { $('lienListeProfs').href = ctx.listeProfsUrl; $('lienListeProfs').style.display = 'inline'; }
+            remplirBenef();
+            initAnnees();
+        }
+
+        function remplirBenef(selection) {
+            const tech = ctx.beneficiaires.filter(b => b.identifiant), profs = ctx.beneficiaires.filter(b => !b.identifiant);
+            const o = b => `<option value="${esc(b.nom)}">${esc(b.nom)}${b.discipline ? ' — ' + esc(b.discipline) : ''}</option>`;
+            let html = '<option value="">— Choisir —</option>';
+            if (tech.length) html += '<optgroup label="Techniciens / DDFPT">' + tech.map(o).join('') + '</optgroup>';
+            if (profs.length) html += '<optgroup label="Professeurs">' + profs.map(o).join('') + '</optgroup>';
+            html += '<option value="__nouveau__">➕ Nouveau professeur…</option>';
+            $('fBenef').innerHTML = html;
+            if (selection) $('fBenef').value = selection;
+        }
+
+        function initAnnees() {
+            const cur = anneeScolaire();
+            const list = [...new Set([cur, ...FRAIS.map(f => f.annee), ...FEUILLES.map(f => f.annee)].filter(Boolean))].sort().reverse();
+            ['feuAnnee', 'arAnnee'].forEach(id => {
+                const el = $(id), prev = el.value || cur;
+                el.innerHTML = '<option value="">Toutes</option>' + list.map(a => `<option>${a}</option>`).join('');
+                el.value = list.includes(prev) || prev === '' ? prev : cur;
+            });
+        }
+
+        function remplirDatalists() {
+            const tri = a => [...a].sort((x, y) => x.localeCompare(y, 'fr'));
+            $('dlMagasins').innerHTML = tri(new Set(FRAIS.map(f => f.magasin).filter(Boolean))).map(m => `<option value="${esc(m)}">`).join('');
+            const arts = new Map();
+            FRAIS.forEach(f => f.articles.forEach(a => { if (!arts.has(norm(a.designation))) arts.set(norm(a.designation), a.designation); }));
+            $('dlArticles').innerHTML = tri(arts.values()).map(a => `<option value="${esc(a)}">`).join('');
+            const lieux = new Set(['NDO']);
+            FRAIS.filter(f => f.type === 'Voiture').forEach(f => f.trajet.replace(/\(aller-retour\)/, '').split('/').forEach(x => x.trim() && lieux.add(x.trim())));
+            $('dlLieux').innerHTML = tri(lieux).map(l => `<option value="${esc(l)}">`).join('');
+            $('vDe').setAttribute('list', 'dlLieux'); $('vA').setAttribute('list', 'dlLieux');
+        }
+
+        /* ───────── Saisie ───────── */
+        function choisirType(t) {
+            typeCourant = t;
+            document.querySelectorAll('.type-card').forEach(c => c.classList.toggle('active', c.dataset.type === t));
+            $('blocAchat').classList.toggle('show', t === 'Achat');
+            $('blocDeplacement').classList.toggle('show', t === 'Déplacement');
+            $('blocVoiture').classList.toggle('show', t === 'Voiture');
+            $('lblDate').textContent = t === 'Voiture' ? 'Date du trajet *' : (t === 'Achat' ? "Date d'achat *" : 'Date *');
+            $('lblPhoto').textContent = t === 'Voiture' ? 'Photo des tickets de péage / parking' : 'Photo du ticket / justificatif (conseillée)';
+            if (t === 'Voiture') preremplirVehicule();
+            majTotal();
+        }
+
+        function preremplirVehicule() {
+            const b = ctx.beneficiaires.find(x => x.nom === $('fBenef').value);
+            if (b && b.puissance && !$('vCV').value) $('vCV').value = b.puissance;
+            if (b && b.electrique) $('vElec').checked = true;
+        }
+
+        function resetForm() {
+            editId = null; photosSaisie = []; renderPhotos('photoPreview', photosSaisie);
+            $('editBanner').style.display = 'none';
+            $('btnCancelEdit').style.display = 'none';
+            $('btnSave').textContent = '💾 Enregistrer le frais';
+            $('fDate').value = todayISO();
+            if (ctx && SITES[ctx.moi.site]) $('fSite').value = ctx.moi.site;
+            ['fMagasin', 'fComment', 'fMontant', 'fPhoto', 'dMontant', 'dDesc', 'vDe', 'vA', 'vComment', 'vKm', 'vDep', 'vArr'].forEach(id => $(id).value = '');
+            $('dNature').value = ''; $('vCV').value = ''; $('vAR').checked = false; $('vElec').checked = false;
+            $('artBody').innerHTML = ''; addArticle();
+            $('annexeBody').innerHTML = '';
+            document.querySelectorAll('.type-card').forEach(c => c.disabled = false);
+            choisirType(typeCourant);
+        }
+
+        function addArticle(a = {}) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="text" class="a-des" list="dlArticles" placeholder="Ex : Citrons" value="${esc(a.designation || '')}"></td>
+                <td class="c-qte"><input type="text" inputmode="decimal" class="a-qte" placeholder="Qté" value="${esc(a.quantite ?? '')}"></td>
+                <td class="c-unite"><input type="text" class="a-uni" list="dlUnites" placeholder="kg, L…" value="${esc(a.unite || '')}"></td>
+                <td class="c-prix"><input type="text" inputmode="decimal" class="a-prix" placeholder="€" value="${esc(a.prix ?? '')}"></td>
+                <td class="c-del"><button class="btn-del" title="Retirer" onclick="this.closest('tr').remove();majTotal()">✕</button></td>`;
+            tr.querySelectorAll('input').forEach(i => i.addEventListener('input', majTotal));
+            $('artBody').appendChild(tr);
+        }
+
+        function addAnnexe(a = {}) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="c-nat"><select class="x-nat">${ctx.natures.map(n => `<option ${n === (a.nature || 'Péage') ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></td>
+                <td class="c-desc"><input type="text" class="x-desc" placeholder="Ex : Péage A13" value="${esc(a.description || '')}"></td>
+                <td class="c-prix"><input type="text" inputmode="decimal" class="x-mt" placeholder="€" value="${esc(a.montant ?? '')}"></td>
+                <td class="c-del"><button class="btn-del" title="Retirer" onclick="this.closest('tr').remove();majTotal()">✕</button></td>`;
+            tr.querySelectorAll('input').forEach(i => i.addEventListener('input', majTotal));
+            $('annexeBody').appendChild(tr);
+        }
+
+        function lireArticles() {
+            return [...document.querySelectorAll('#artBody tr')].map(tr => ({
+                designation: tr.querySelector('.a-des').value.trim(),
+                quantite: tr.querySelector('.a-qte').value.replace(',', '.').trim(),
+                unite: tr.querySelector('.a-uni').value.trim(),
+                prix: tr.querySelector('.a-prix').value.replace(',', '.').trim()
+            })).filter(a => a.designation);
+        }
+        function lireAnnexes() {
+            return [...document.querySelectorAll('#annexeBody tr')].map(tr => ({
+                nature: tr.querySelector('.x-nat').value, description: tr.querySelector('.x-desc').value.trim(),
+                montant: tr.querySelector('.x-mt').value.replace(',', '.').trim()
+            })).filter(a => num(a.montant) > 0);
+        }
+
+        function tauxCourant() {
+            const b = ctx.bareme.find(x => x.code === $('vCV').value);
+            if (!b) return null;
+            return Math.round(b.a * ($('vElec').checked ? 1 + ctx.majorationElec : 1) * 10000) / 10000;
+        }
+        function kmCourant() {
+            const d = num($('vDep').value), a = num($('vArr').value);
+            if (d !== null && a !== null) return a > d ? a - d : null;
+            const k = num($('vKm').value);
+            return k === null ? null : k * ($('vAR').checked ? 2 : 1);
+        }
+
+        /* Total selon le type ; pour la voiture, on renvoie l'indemnité + péages */
+        function totalSaisi() {
+            if (typeCourant === 'Achat') {
+                const avecPrix = lireArticles().filter(a => num(a.prix) !== null);
+                if (avecPrix.length) return { total: avecPrix.reduce((s, a) => s + num(a.prix), 0), manuel: false };
+                return { total: num($('fMontant').value) || 0, manuel: true };
+            }
+            if (typeCourant === 'Déplacement') return { total: num($('dMontant').value) || 0 };
+            const km = kmCourant(), t = tauxCourant();
+            const indem = km && t ? Math.round(km * t * 100) / 100 : 0;
+            const annexes = lireAnnexes().reduce((s, a) => s + num(a.montant), 0);
+            return { total: indem + annexes, indem, annexes, km, taux: t };
+        }
+
+        function majTotal() {
+            if (!ctx) return;
+            const r = totalSaisi();
+            $('montantManuelZone').style.display = typeCourant === 'Achat' && r.manuel ? 'block' : 'none';
+            if (typeCourant === 'Voiture') {
+                $('calcKm').innerHTML = r.km && r.taux
+                    ? `🚗 <strong>${String(Math.round(r.km * 10) / 10).replace('.', ',')} km</strong> × ${String(r.taux).replace('.', ',')} €/km${$('vElec').checked ? ` (électrique +${Math.round(ctx.majorationElec * 100)} %)` : ''} = <strong>${eur(r.indem)}</strong>${r.annexes ? ` + péages/parkings ${eur(r.annexes)}` : ''}`
+                    : 'Indiquez la distance (ou les relevés de compteur) et la puissance fiscale pour calculer l\'indemnité (barème : tranche « jusqu\'à 5 000 km »).';
+            }
+            $('totalLive').textContent = 'Total : ' + eur(r.total);
+            majCumulInfo();
+        }
+        document.addEventListener('input', e => { if (['fMontant', 'dMontant'].includes(e.target.id)) majTotal(); });
+
+        const enAttente = nom => FRAIS.filter(f => f.beneficiaire === nom && f.statut === 'En attente');
+        const cumulAchats = (nom, sauf) => enAttente(nom).filter(f => f.type === 'Achat' && f.id !== sauf).reduce((s, f) => s + f.montant, 0);
+
+        function majCumulInfo() {
+            const box = $('cumulInfo');
+            const nom = $('fBenef').value;
+            if (!ctx || !nom || nom === '__nouveau__') { box.style.display = 'none'; return; }
+            box.style.display = 'block';
+            if (typeCourant === 'Achat') {
+                const deja = cumulAchats(nom, editId), apres = deja + totalSaisi().total;
+                box.innerHTML = `<p>Achats en attente pour <strong>${esc(nom)}</strong> : ${eur(deja)} → après ce ticket : <strong>${eur(apres)}</strong><br>
+                    ${apres >= ctx.seuil ? '✅ Seuil atteint : la note de frais pourra être éditée.' : `Encore ${eur(ctx.seuil - apres)} avant le seuil de ${eur(ctx.seuil)}.`}</p>`;
+            } else {
+                box.innerHTML = `<p>${typeCourant === 'Voiture' ? '🚗 La fiche <strong>Frais kilométriques</strong>' : '🚆 La <strong>note de frais</strong>'} pourra être éditée tout de suite après l'enregistrement (onglet « À rembourser »), puis validée et signée par le DDFPT.</p>`;
+            }
+        }
+
+        function onBenefChange() {
+            const v = $('fBenef').value;
+            $('nouveauProf').style.display = v === '__nouveau__' ? 'block' : 'none';
+            const b = ctx.beneficiaires.find(x => x.nom === v);
+            if (b && b.discipline && ctx.disciplines.includes(b.discipline)) document.querySelectorAll('.selDisc').forEach(s => s.value = b.discipline);
+            if (typeCourant === 'Voiture') { $('vCV').value = ''; $('vElec').checked = false; preremplirVehicule(); majTotal(); }
+            majCumulInfo();
+        }
+
+        async function ajouterProf() {
+            const nom = $('npNom').value.trim(), discipline = $('npDisc').value;
+            if (!nom) return toast('Indiquez le nom du professeur.', true);
+            try {
+                await api('addBeneficiaire', { nom, type: 'Professeur', discipline, site: $('fSite').value });
+                if (!ctx.beneficiaires.some(b => b.nom.toLowerCase() === nom.toLowerCase())) {
+                    ctx.beneficiaires.push({ nom, type: 'Professeur', discipline, fonction: 'Professeur de ' + discipline });
+                    ctx.beneficiaires.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+                }
+                remplirBenef(nom);
+                document.querySelectorAll('.selDisc').forEach(s => s.value = discipline);
+                $('nouveauProf').style.display = 'none'; $('npNom').value = '';
+                toast('Professeur ajouté ✅');
+                majCumulInfo();
+            } catch (e) { toast(e.message, true); }
+        }
+
+        /* ───────── Photos / scans des justificatifs ─────────
+           Traitement dans le navigateur : réduction à 1600 px, et en « mode
+           scan » recadrage automatique sur le ticket + noir & blanc contrasté
+           (normalisation du fond → lisible à l'impression). */
+        function setModeScan(v) {
+            modeScan = v;
+            try { localStorage.setItem('fraisModeScan', v ? 'oui' : 'non'); } catch (e) {}
+            document.querySelectorAll('.optScan').forEach(c => c.checked = v);
+            Promise.all([photosSaisie, photosAjout].map(async list => { for (const ph of list) if (ph.img) await preparerPhoto(ph); }))
+                .then(() => { renderPhotos('photoPreview', photosSaisie); renderPhotos('ajoutPreview', photosAjout); });
+        }
+
+        function chargerImage(file) {
+            return new Promise((ok, ko) => {
+                const img = new Image(), url = URL.createObjectURL(file);
+                img.onload = () => { URL.revokeObjectURL(url); ok(img); };
+                img.onerror = () => { URL.revokeObjectURL(url); ko(new Error('Image illisible (' + file.name + ') — essayez une photo JPEG.')); };
+                img.src = url;
+            });
+        }
+
+        /* Détecte la zone claire (le ticket) sur fond plus sombre. Renvoie un rectangle en pixels de l'image. */
+        function detecterTicket(img) {
+            const W0 = img.naturalWidth, H0 = img.naturalHeight;
+            const k = Math.min(1, 400 / Math.max(W0, H0));
+            const w = Math.max(1, Math.round(W0 * k)), h = Math.max(1, Math.round(H0 * k));
+            const c = document.createElement('canvas'); c.width = w; c.height = h;
+            const cx = c.getContext('2d'); cx.drawImage(img, 0, 0, w, h);
+            const d = cx.getImageData(0, 0, w, h).data;
+            const g = new Uint8Array(w * h), hist = new Array(256).fill(0);
+            for (let i = 0; i < w * h; i++) { const v = (d[4 * i] * 299 + d[4 * i + 1] * 587 + d[4 * i + 2] * 114) / 1000 | 0; g[i] = v; hist[v]++; }
+            // Seuil d'Otsu
+            let sum = 0; for (let t = 0; t < 256; t++) sum += t * hist[t];
+            let sumB = 0, wB = 0, best = 0, seuil = 128;
+            for (let t = 0; t < 256; t++) {
+                wB += hist[t]; if (!wB) continue;
+                const wF = w * h - wB; if (!wF) break;
+                sumB += t * hist[t];
+                const m = sumB / wB - (sum - sumB) / wF, v = wB * wF * m * m;
+                if (v > best) { best = v; seuil = t; }
+            }
+            const plusLongueSuite = (fr, lim) => {
+                let a = -1, b = -1, cur = -1;
+                for (let i = 0; i <= fr.length; i++) {
+                    if (i < fr.length && fr[i] > lim) { if (cur < 0) cur = i; }
+                    else if (cur >= 0) { if (i - cur > b - a) { a = cur; b = i; } cur = -1; }
+                }
+                return [a, b];
+            };
+            const lignes = new Array(h).fill(0);
+            for (let y = 0; y < h; y++) { let n = 0; for (let x = 0; x < w; x++) if (g[y * w + x] > seuil) n++; lignes[y] = n / w; }
+            const [y0, y1] = plusLongueSuite(lignes, 0.3);
+            if (y0 < 0) return null;
+            const cols = new Array(w).fill(0);
+            for (let x = 0; x < w; x++) { let n = 0; for (let y = y0; y < y1; y++) if (g[y * w + x] > seuil) n++; cols[x] = n / (y1 - y0); }
+            const [x0, x1] = plusLongueSuite(cols, 0.5);
+            if (x0 < 0) return null;
+            const aire = (x1 - x0) * (y1 - y0) / (w * h);
+            if (aire < 0.1 || aire > 0.93) return null; // pas de fond distinct : on ne recadre pas
+            const mx = (x1 - x0) * 0.02, my = (y1 - y0) * 0.02;
+            const X0 = Math.max(0, x0 - mx) / k, Y0 = Math.max(0, y0 - my) / k;
+            return { x: X0, y: Y0, w: Math.min(W0, (x1 + mx) / k) - X0, h: Math.min(H0, (y1 + my) / k) - Y0 };
+        }
+
+        /* Noir & blanc « scan » : on divise par une estimation floue du fond (ombres, éclairage) puis on étire le contraste. */
+        function effetScan(cx, w, h) {
+            const im = cx.getImageData(0, 0, w, h), d = im.data;
+            const g = new Float32Array(w * h);
+            for (let i = 0; i < w * h; i++) g[i] = (d[4 * i] * 299 + d[4 * i + 1] * 587 + d[4 * i + 2] * 114) / 1000;
+            const W1 = w + 1, I = new Float64Array(W1 * (h + 1));
+            for (let y = 1; y <= h; y++) { let ligne = 0; for (let x = 1; x <= w; x++) { ligne += g[(y - 1) * w + x - 1]; I[y * W1 + x] = I[(y - 1) * W1 + x] + ligne; } }
+            const r = Math.max(10, Math.round(Math.max(w, h) / 24));
+            for (let y = 0; y < h; y++) {
+                const ya = Math.max(0, y - r), yb = Math.min(h, y + r + 1);
+                for (let x = 0; x < w; x++) {
+                    const xa = Math.max(0, x - r), xb = Math.min(w, x + r + 1);
+                    const fond = (I[yb * W1 + xb] - I[ya * W1 + xb] - I[yb * W1 + xa] + I[ya * W1 + xa]) / ((yb - ya) * (xb - xa));
+                    let v = g[y * w + x] / Math.max(fond, 1) * 255;
+                    v = (v - 90) * 255 / (235 - 90);
+                    v = v < 0 ? 0 : v > 255 ? 255 : v;
+                    const i = 4 * (y * w + x); d[i] = d[i + 1] = d[i + 2] = v;
+                }
+            }
+            // Blanchit les coins sombres restés en bordure (ticket légèrement de travers) : économise l'encre
+            const lim = Math.round(Math.max(w, h) * 0.06), sombre = i => d[4 * i] < 110, blanc = i => { d[4 * i] = d[4 * i + 1] = d[4 * i + 2] = 255; };
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < lim && x < w && sombre(y * w + x); x++) blanc(y * w + x);
+                for (let x = w - 1; x >= w - lim && x >= 0 && sombre(y * w + x); x--) blanc(y * w + x);
+            }
+            for (let x = 0; x < w; x++) {
+                for (let y = 0; y < lim && y < h && sombre(y * w + x); y++) blanc(y * w + x);
+                for (let y = h - 1; y >= h - lim && y >= 0 && sombre(y * w + x); y--) blanc(y * w + x);
+            }
+            cx.putImageData(im, 0, 0);
+        }
+
+        async function preparerPhoto(ph) {
+            const img = ph.img;
+            let zone = { x: 0, y: 0, w: img.naturalWidth, h: img.naturalHeight };
+            if (modeScan) { const z = detecterTicket(img); if (z) zone = z; }
+            const k = Math.min(1, 1600 / Math.max(zone.w, zone.h));
+            const c = document.createElement('canvas');
+            c.width = Math.round(zone.w * k); c.height = Math.round(zone.h * k);
+            const cx = c.getContext('2d');
+            cx.drawImage(img, zone.x, zone.y, zone.w, zone.h, 0, 0, c.width, c.height);
+            if (modeScan) effetScan(cx, c.width, c.height);
+            const url = c.toDataURL('image/jpeg', modeScan ? 0.8 : 0.75);
+            ph.apercu = url;
+            ph.data = { base64: url.split(',')[1], mimeType: 'image/jpeg', nom: 'ticket.jpg' };
+        }
+
+        async function lireFichiers(files) {
+            const res = [];
+            for (const file of files) {
+                if (file.type === 'application/pdf') {
+                    if (file.size > 8e6) { toast('PDF trop lourd (8 Mo max) : ' + file.name, true); continue; }
+                    const b64 = await new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result.split(',')[1]); r.readAsDataURL(file); });
+                    res.push({ file, data: { base64: b64, mimeType: 'application/pdf', nom: file.name } });
+                } else {
+                    try { const ph = { file, img: await chargerImage(file) }; await preparerPhoto(ph); res.push(ph); }
+                    catch (e) { toast(e.message, true); }
+                }
+            }
+            return res;
+        }
+
+        function renderPhotos(conteneurId, liste) {
+            $(conteneurId).innerHTML = liste.map((ph, i) => `<div class="photo-item">
+                ${ph.apercu ? `<img src="${ph.apercu}" alt="Justificatif ${i + 1}">` : `<div class="pdf-ph">📎 ${esc(ph.file.name)}</div>`}
+                <button title="Retirer" onclick="retirerPhoto('${conteneurId}', ${i})">✕</button></div>`).join('');
+        }
+        function retirerPhoto(conteneurId, i) {
+            const liste = conteneurId === 'photoPreview' ? photosSaisie : photosAjout;
+            liste.splice(i, 1); renderPhotos(conteneurId, liste);
+            if (conteneurId === 'ajoutPreview') $('btnAjout').disabled = !photosAjout.length;
+        }
+
+        async function onPhoto(ev) {
+            const files = [...ev.target.files]; ev.target.value = '';
+            if (!files.length) return;
+            toast('⏳ Traitement des photos…');
+            photosSaisie.push(...await lireFichiers(files));
+            renderPhotos('photoPreview', photosSaisie);
+            $('toast').style.display = 'none';
+        }
+
+        /* Bouton 📷+ : ajouter des justificatifs à un frais déjà saisi (depuis le téléphone par ex.) */
+        function ouvrirAjout(id) {
+            const f = FRAIS.find(x => x.id === id);
+            ajoutFraisId = id; photosAjout = [];
+            renderPhotos('ajoutPreview', photosAjout);
+            $('btnAjout').disabled = true;
+            $('ajoutInfo').textContent = f ? `${f.id} · ${f.beneficiaire} · ${frDate(f.dateAchat)} · ${libelleFrais(f)} · ${eur(f.montant)}${f.photos.length ? ` — ${f.photos.length} justificatif(s) déjà joint(s)` : ''}` : id;
+            $('ajoutOverlay').classList.add('show');
+        }
+        function fermerAjout() { $('ajoutOverlay').classList.remove('show'); photosAjout = []; }
+        async function onAjoutPhotos(ev) {
+            const files = [...ev.target.files]; ev.target.value = '';
+            if (!files.length) return;
+            $('btnAjout').disabled = true;
+            photosAjout.push(...await lireFichiers(files));
+            renderPhotos('ajoutPreview', photosAjout);
+            $('btnAjout').disabled = !photosAjout.length;
+        }
+        async function envoyerAjout() {
+            const btn = $('btnAjout');
+            btn.disabled = true; btn.textContent = '⏳ Envoi…';
+            try {
+                const r = await api('addJustificatifs', { id: ajoutFraisId, photos: photosAjout.map(p => p.data) });
+                toast(`${r.photos.length} justificatif(s) pour ${r.id} ✅`);
+                fermerAjout();
+                await recharger();
+            } catch (e) { toast(e.message, true); btn.disabled = false; }
+            finally { btn.textContent = 'Envoyer'; }
+        }
+
+        function liensPhotos(f) {
+            if (!f.photos.length) return '<span class="icon-btn" title="Pas de justificatif" style="opacity:.3">📷</span>';
+            return '<span class="photo-links">' + f.photos.map((u, i) => `<a href="${esc(u)}" target="_blank" title="Justificatif ${i + 1}">📷${f.photos.length > 1 ? '<sub>' + (i + 1) + '</sub>' : ''}</a>`).join('') + '</span>';
+        }
+
+        async function enregistrer() {
+            const beneficiaire = $('fBenef').value;
+            if (!beneficiaire || beneficiaire === '__nouveau__') return toast('Choisissez la personne à rembourser.', true);
+            const payload = {
+                id: editId || undefined, type: typeCourant, dateAchat: $('fDate').value, site: $('fSite').value,
+                beneficiaire, commentaire: $('fComment').value.trim(), photos: photosSaisie.map(p => p.data)
+            };
+            if (typeCourant === 'Achat') {
+                const articles = lireArticles();
+                if (!articles.length) return toast('Ajoutez au moins un article.', true);
+                const r = totalSaisi();
+                if (!(r.total > 0)) return toast(r.manuel ? 'Indiquez le montant total du ticket.' : 'Montant nul.', true);
+                Object.assign(payload, { articles, montant: r.manuel ? r.total : '', discipline: $('fDisc').value, magasin: $('fMagasin').value.trim(), categorie: $('fCat').value });
+            } else if (typeCourant === 'Déplacement') {
+                if (!$('dNature').value) return toast('Choisissez la nature (train, péage, hôtel…).', true);
+                if (!$('dDesc').value.trim()) return toast('Ajoutez une description.', true);
+                if (!(num($('dMontant').value) > 0)) return toast('Indiquez le montant TTC.', true);
+                Object.assign(payload, { nature: $('dNature').value, description: $('dDesc').value.trim(), montant: $('dMontant').value.replace(',', '.'), discipline: $('dDisc').value });
+            } else {
+                const de = $('vDe').value.trim(), a = $('vA').value.trim();
+                if (!de || !a) return toast('Indiquez le trajet (départ et arrivée).', true);
+                if (!$('vCV').value) return toast('Choisissez la puissance fiscale du véhicule.', true);
+                if (!kmCourant()) return toast('Indiquez la distance ou des relevés de compteur cohérents.', true);
+                Object.assign(payload, {
+                    trajet: de.toUpperCase() + ' / ' + a.toUpperCase(), description: $('vComment').value.trim(), discipline: $('vDisc').value,
+                    km: $('vKm').value.replace(',', '.'), allerRetour: $('vAR').checked,
+                    compteurDepart: $('vDep').value, compteurArrivee: $('vArr').value,
+                    puissance: $('vCV').value, electrique: $('vElec').checked, annexes: lireAnnexes()
+                });
+            }
+            const btn = $('btnSave');
+            btn.disabled = true; btn.textContent = '⏳ Enregistrement…';
+            try {
+                const r = await api('saveFrais', payload);
+                let msg = `${editId ? 'Frais modifié' : 'Frais enregistré'} (${r.id}, ${eur(r.montant)})`;
+                if (r.type === 'Achat') msg += ` — achats en attente de ${beneficiaire} : ${eur(r.cumulAchats)}${r.cumulAchats >= ctx.seuil ? ' ✅ note à éditer' : ''}`;
+                else msg += ' — document éditable dans « À rembourser »';
+                toast(msg);
+                if (payload.type === 'Voiture') {
+                    const b = ctx.beneficiaires.find(x => x.nom === beneficiaire);
+                    if (b) { b.puissance = payload.puissance; b.electrique = payload.electrique; }
+                }
+                resetForm();
+                $('fBenef').value = beneficiaire;
+                if (typeCourant === 'Voiture') preremplirVehicule();
+                await recharger();
+            } catch (e) { toast(e.message, true); }
+            finally { btn.disabled = false; btn.textContent = editId ? '💾 Enregistrer les modifications' : '💾 Enregistrer le frais'; }
+        }
+
+        function modifierFrais(id) {
+            const f = FRAIS.find(x => x.id === id);
+            if (!f) return;
+            typeCourant = f.type;
+            resetForm();
+            editId = id;
+            $('editBanner').style.display = 'block';
+            $('editBanner').textContent = `✏️ Modification du frais ${id} — ${f.photos.length} justificatif(s) déjà joint(s), conservé(s) ; les nouvelles photos s'ajoutent.`;
+            $('btnCancelEdit').style.display = 'block';
+            $('btnSave').textContent = '💾 Enregistrer les modifications';
+            document.querySelectorAll('.type-card').forEach(c => c.disabled = c.dataset.type !== f.type);
+            if (![...$('fBenef').options].some(o => o.value === f.beneficiaire)) { ctx.beneficiaires.push({ nom: f.beneficiaire, type: f.typeBeneficiaire }); remplirBenef(); }
+            $('fBenef').value = f.beneficiaire;
+            $('fDate').value = f.dateAchat;
+            if (SITES[f.site]) $('fSite').value = f.site;
+            $('fComment').value = f.commentaire;
+            if (f.type === 'Achat') {
+                $('fDisc').value = f.discipline; if (f.categorie) $('fCat').value = f.categorie;
+                $('fMagasin').value = f.magasin;
+                $('artBody').innerHTML = '';
+                (f.articles.length ? f.articles : [{}]).forEach(a => addArticle(a));
+                if (!f.articles.some(a => a.prix !== '' && a.prix !== null)) $('fMontant').value = f.montant;
+            } else if (f.type === 'Déplacement') {
+                $('dNature').value = f.nature; $('dDesc').value = f.description; $('dMontant').value = f.montant; $('dDisc').value = f.discipline;
+            } else {
+                const parts = f.trajet.replace(/\s*\(aller-retour\)\s*$/, '').split(' / ');
+                $('vDe').value = parts[0] || ''; $('vA').value = parts.slice(1).join(' / ');
+                $('vComment').value = f.description; $('vDisc').value = f.discipline;
+                if (f.compteurDepart !== '' && f.compteurArrivee !== '') { $('vDep').value = f.compteurDepart; $('vArr').value = f.compteurArrivee; $('vCompteurs').open = true; }
+                else $('vKm').value = f.km;
+                $('vCV').value = f.puissance; $('vElec').checked = f.electrique;
+                FRAIS.filter(x => x.rattacheA === f.id && x.statut === 'En attente').forEach(x => addAnnexe({ nature: x.nature, description: x.description, montant: x.montant }));
+            }
+            choisirType(f.type);
+            showPane('saisie');
+            window.scrollTo({ top: $('formCard').offsetTop - 20, behavior: 'smooth' });
+        }
+
+        async function annulerFrais(id) {
+            const f = FRAIS.find(x => x.id === id);
+            if (!confirm(`Annuler le frais ${id} ?${f && f.type === 'Voiture' ? '\nSes péages/parkings seront aussi annulés.' : ''}\n(Il reste archivé avec le statut "Annulé".)`)) return;
+            try { await api('annulerFrais', { id }); toast('Frais annulé'); await recharger(); }
+            catch (e) { toast(e.message, true); }
+        }
+        const peutModifier = f => !lecture && f.statut === 'En attente' && !f.rattacheA && (estDDFPT || f.saisiPar === user);
+
+        /* ───────── À rembourser ───────── */
+        function libelleFrais(f) {
+            if (f.type === 'Achat') return f.articles.map(a => (a.quantite !== '' && a.quantite !== null ? a.quantite + (a.unite ? ' ' + a.unite : '') + ' ' : '') + a.designation).join(', ') || f.description;
+            if (f.type === 'Voiture') return `${f.trajet} — ${String(f.km).replace('.', ',')} km × ${String(f.tauxKm).replace('.', ',')} €`;
+            return `${f.nature} : ${f.description}`;
+        }
+
+        function ligneFrais(f, opt = {}) {
+            const coche = opt.checkbox ? `<input type="checkbox" ${decoches.has(f.id) ? '' : 'checked'} onchange="toggleFrais('${f.id}', this.checked)">` : '';
+            return `<div class="frais-line ${opt.annexe ? 'annexe' : ''}">${coche}
+                <div class="fl-main"><div><span class="tag ${TAGS[f.type] || ''}">${opt.annexe ? '↳ ' + esc(f.nature) : esc(f.type)}</span>${opt.annexe ? esc(f.description) : esc(libelleFrais(f))}</div>
+                    ${opt.annexe ? '' : `<div class="fl-sub">${frDate(f.dateAchat)}${f.magasin ? ' · ' + esc(f.magasin) : ''}${f.discipline ? ' · ' + esc(f.discipline) : ''} · ${esc(SITES[f.site] || f.site)} · ${esc(f.id)} · saisi par ${esc(f.saisiPar)}</div>`}</div>
+                <div class="fl-amt">${eur(f.montant)}</div>
+                ${opt.annexe ? '' : liensPhotos(f)}
+                ${!opt.annexe && !lecture && f.statut !== 'Annulé' ? `<button class="btn-add-photo" title="Ajouter une photo / un scan" onclick="ouvrirAjout('${f.id}')">📷+</button>` : ''}
+                ${!opt.annexe && opt.actions !== false && peutModifier(f) ? `<button class="icon-btn" title="Modifier" onclick="modifierFrais('${f.id}')">✏️</button><button class="icon-btn" title="Annuler" onclick="annulerFrais('${f.id}')">🗑️</button>` : ''}
+            </div>`;
+        }
+        function toggleFrais(id, on) { on ? decoches.delete(id) : decoches.add(id); renderAttente(); }
+
+        function renderAttente() {
+            const noms = [...new Set(FRAIS.filter(f => f.statut === 'En attente').map(f => f.beneficiaire))];
+            const el = $('listeAttente');
+            if (!noms.length) { el.innerHTML = '<div class="empty-msg">Aucun frais en attente 🎉</div>'; return; }
+            const cartes = noms.map(nom => {
+                const list = enAttente(nom);
+                const ndf = list.filter(f => f.type === 'Achat' || (f.type === 'Déplacement' && !f.rattacheA));
+                const voit = list.filter(f => f.type === 'Voiture');
+                const total = list.reduce((s, f) => s + f.montant, 0);
+                const selNdf = ndf.filter(f => !decoches.has(f.id));
+                const achatsSel = selNdf.filter(f => f.type === 'Achat').reduce((s, f) => s + f.montant, 0);
+                const depSel = selNdf.some(f => f.type === 'Déplacement');
+                const ndfPrete = selNdf.length && (achatsSel >= ctx.seuil || depSel);
+                const selVoit = voit.filter(f => !decoches.has(f.id));
+                const achatsTot = ndf.filter(f => f.type === 'Achat').reduce((s, f) => s + f.montant, 0);
+                return { nom, total, pret: ndfPrete || selVoit.length > 0, html: `
+                    <div class="person-card ${ndfPrete || selVoit.length ? 'pret' : ''}">
+                        <div class="person-top">
+                            <div><div class="person-name">${esc(nom)}</div><div class="person-sub">${esc(list[0].typeBeneficiaire || '')} · ${list.length} frais en attente</div></div>
+                            <div class="person-total">${eur(total)}</div>
+                        </div>
+                        ${ndf.length ? `<div class="doc-block">
+                            <h4><span>📄 Note de frais Notre-Dame — achats & déplacements</span><span>${eur(selNdf.reduce((s, f) => s + f.montant, 0))}</span></h4>
+                            ${ndf.some(f => f.type === 'Achat') ? `<div class="jauge ${achatsTot >= ctx.seuil ? 'ok' : ''}"><div style="width:${Math.min(100, achatsTot / ctx.seuil * 100)}%"></div></div>
+                            <div class="person-sub">Achats : ${eur(achatsTot)} ${achatsTot >= ctx.seuil ? '✅ seuil atteint' : `— encore ${eur(ctx.seuil - achatsTot)} avant ${eur(ctx.seuil)}`}${depSel ? ' · un déplacement permet d\'éditer la note tout de suite' : ''}</div>` : ''}
+                            ${ndf.map(f => ligneFrais(f, { checkbox: !lecture })).join('')}
+                            ${lecture ? '' : `<div class="actions-row">
+                                <button class="btn-go" ${ndfPrete ? '' : 'disabled'} onclick='editerFeuille(${js(nom)}, "Note de frais", false)'>📄 Éditer la note de frais</button>
+                                ${!ndfPrete && selNdf.length ? `<button class="link-force" onclick='editerFeuille(${js(nom)}, "Note de frais", true)'>Éditer quand même (fin d'année…)</button>` : ''}
+                            </div>`}
+                        </div>` : ''}
+                        ${voit.length ? `<div class="doc-block">
+                            <h4><span>🚗 Fiche Frais kilométriques</span><span>${eur(selVoit.reduce((s, f) => s + f.montant + list.filter(x => x.rattacheA === f.id).reduce((t, x) => t + x.montant, 0), 0))}</span></h4>
+                            ${voit.map(f => ligneFrais(f, { checkbox: !lecture }) + list.filter(x => x.rattacheA === f.id).map(x => ligneFrais(x, { annexe: true })).join('')).join('')}
+                            ${lecture ? '' : `<div class="actions-row">
+                                <button class="btn-go" ${selVoit.length ? '' : 'disabled'} onclick='editerFeuille(${js(nom)}, "Frais kilométriques", false)'>🚗 Éditer la fiche kilométrique</button>
+                            </div>`}
+                        </div>` : ''}
+                    </div>` };
+            }).sort((a, b) => (b.pret - a.pret) || (b.total - a.total));
+            el.innerHTML = cartes.map(c => c.html).join('');
+        }
+
+        async function editerFeuille(nom, typeDocument, forcer) {
+            const list = enAttente(nom);
+            const choisis = typeDocument === 'Note de frais'
+                ? list.filter(f => (f.type === 'Achat' || (f.type === 'Déplacement' && !f.rattacheA)) && !decoches.has(f.id))
+                : list.filter(f => f.type === 'Voiture' && !decoches.has(f.id));
+            if (!choisis.length) return toast('Cochez au moins un frais.', true);
+            const total = choisis.reduce((s, f) => s + f.montant + (typeDocument !== 'Note de frais' ? list.filter(x => x.rattacheA === f.id).reduce((t, x) => t + x.montant, 0) : 0), 0);
+            const msg = (forcer ? `Les achats de ${nom} sont sous le seuil de ${eur(ctx.seuil)}.\n` : '') +
+                `Éditer la ${typeDocument === 'Note de frais' ? 'note de frais' : 'fiche Frais kilométriques'} de ${nom} (${choisis.length} frais, ${eur(total)}) ?\nElle sera transmise au DDFPT pour validation et signature.`;
+            if (!confirm(msg)) return;
+            try {
+                toast('⏳ Génération du document (quelques secondes)…');
+                const r = await api('creerFeuille', { beneficiaire: nom, typeDocument, fraisIds: choisis.map(f => f.id), forcer });
+                choisis.forEach(f => decoches.delete(f.id));
+                toast(`${r.numero} créée (${eur(r.total)}) — en attente de validation DDFPT`);
+                await recharger();
+                $('feuStatut').value = ''; $('feuType').value = '';
+                showPane('feuilles');
+            } catch (e) { toast(e.message, true); }
+        }
+
+        /* ───────── Feuilles ───────── */
+        const BADGES = { 'À valider': 'b-avalider', 'Signée': 'b-signee', 'Remise compta': 'b-remise', 'Remboursée': 'b-remboursee', 'Annulée': 'b-annulee' };
+        const CARTE = { 'Signée': 'st-signee', 'Remise compta': 'st-remise', 'Remboursée': 'st-remboursee', 'Annulée': 'st-annulee' };
+
+        function renderFeuilles() {
+            const aValider = FEUILLES.filter(f => f.statut === 'À valider').length;
+            $('nbAValider').textContent = aValider ? `(${aValider} à valider)` : '';
+            const alerte = $('alertValider');
+            alerte.style.display = estDDFPT && aValider ? 'block' : 'none';
+            alerte.textContent = `✍️ ${aValider} feuille(s) attendent votre validation et votre signature — cliquer pour filtrer`;
+
+            const an = $('feuAnnee').value, ty = $('feuType').value, st = $('feuStatut').value;
+            const list = FEUILLES.filter(f => (!an || f.annee === an) && (!ty || f.typeDocument === ty) && (!st || f.statut === st));
+            const el = $('listeFeuilles');
+            if (!list.length) { el.innerHTML = '<div class="empty-msg">Aucune feuille.</div>'; return; }
+            el.innerHTML = list.map(f => {
+                const frais = FRAIS.filter(x => x.feuille === f.numero);
+                const n = js(f.numero);
+                const signee = ['Signée', 'Remise compta', 'Remboursée'].includes(f.statut);
+                let act = `<button class="btn-violet" onclick='ouvrirPdf(${n})'>${signee ? '🖨️ Imprimer (feuille signée + tickets)' : '👁️ Aperçu PDF (+ tickets)'}</button>`;
+                if (f.fichier) act += `<a class="btn-light" href="${esc(f.fichier)}" target="_blank">📊 Google Sheet</a>`;
+                if (f.pdfComplet) act += `<a class="btn-light" href="${esc(f.pdfComplet)}" target="_blank" title="PDF feuille + justificatifs archivé dans Drive">🗂️ PDF complet (Drive)</a>`;
+                if (!lecture) {
+                    if (f.statut === 'À valider') act += estDDFPT
+                        ? `<button class="btn-go" onclick='signer(${n})'>✅ Valider & signer</button><button class="btn-danger" onclick='statut(${n}, "Annulée")'>❌ Refuser</button>`
+                        : '<span class="wait-ddfpt">⏳ En attente de validation par le DDFPT</span>';
+                    if (f.statut === 'Signée') act += `<button class="btn-light" onclick='statut(${n}, "Remise compta")'>📤 Remise à la compta</button>`;
+                    if (f.statut === 'Remise compta' || f.statut === 'Signée') act += `<button class="btn-light" onclick='statut(${n}, "Remboursée")'>💶 Remboursée</button>`;
+                    if (estDDFPT && signee && f.statut !== 'Remboursée') act += `<button class="btn-danger" onclick='statut(${n}, "Annulée")'>Annuler</button>`;
+                }
+                const dates = [f.signeeLe && 'signée le ' + f.signeeLe, f.remiseLe && 'remise le ' + f.remiseLe, f.rembourseeLe && 'remboursée le ' + f.rembourseeLe].filter(Boolean).join(' · ');
+                return `<div class="sheet-card ${CARTE[f.statut] || ''}">
+                    <div class="person-top">
+                        <div><div style="font-weight:700;color:#667eea">${esc(f.numero)} · ${esc(f.beneficiaire)}</div>
+                            <div class="person-sub"><span class="badge b-doc">${f.typeDocument === 'Frais kilométriques' ? '🚗' : '📄'} ${esc(f.typeDocument)}</span> ${esc(f.periode)} · ${f.nbFrais} frais · ${esc(f.sites)} · éditée le ${frDate(f.dateCreation)} par ${esc(f.creePar)}${dates ? ' · ' + dates : ''}</div></div>
+                        <div style="text-align:right"><span class="badge ${BADGES[f.statut] || 'b-attente'}">${esc(f.statut)}</span><div class="person-total" style="margin-top:4px">${eur(f.total)}</div></div>
+                    </div>
+                    <details><summary style="cursor:pointer;color:#667eea;font-weight:600;font-size:14px;margin-top:8px">Détail des frais</summary>${frais.map(x => ligneFrais(x, { actions: false, annexe: !!x.rattacheA })).join('') || '<p class="hint">—</p>'}</details>
+                    <div class="sheet-actions">${act}</div>
+                </div>`;
+            }).join('');
+        }
+
+        /* pdf-lib (chargé à la demande) : fusion « feuille + tickets » dans le navigateur */
+        let _pdfLib = null;
+        function chargerPdfLib() {
+            if (window.PDFLib) return Promise.resolve(window.PDFLib);
+            if (_pdfLib) return _pdfLib;
+            const sources = ['https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js', 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js'];
+            _pdfLib = sources.reduce((prom, src) => prom.catch(() => new Promise((ok, ko) => {
+                const sc = document.createElement('script'); sc.src = src;
+                sc.onload = () => window.PDFLib ? ok(window.PDFLib) : ko(new Error('pdf-lib'));
+                sc.onerror = () => ko(new Error('pdf-lib indisponible'));
+                document.head.appendChild(sc);
+            })), Promise.reject());
+            _pdfLib.catch(() => { _pdfLib = null; });
+            return _pdfLib;
+        }
+        const b64VersOctets = b64 => Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        function octetsVersB64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
+        const texteSur = t => String(t).replace(/[^\x20-\x7E\u00A0-\u00FF€–—’·]/g, '');
+
+        async function fusionnerAvecJustificatifs(pdfB64, justifs, titre) {
+            const { PDFDocument, StandardFonts, rgb } = await chargerPdfLib();
+            const doc = await PDFDocument.load(b64VersOctets(pdfB64));
+            const font = await doc.embedFont(StandardFonts.Helvetica), gras = await doc.embedFont(StandardFonts.HelveticaBold);
+            const A4 = [595.28, 841.89], M = 36;
+            const entete = (page, legende) => {
+                page.drawText(texteSur('Justificatifs — ' + titre), { x: M, y: A4[1] - M - 4, size: 11, font: gras, color: rgb(0.3, 0.32, 0.75) });
+                page.drawText(texteSur(legende), { x: M, y: A4[1] - M - 22, size: 9, font, color: rgb(0.2, 0.2, 0.2) });
+            };
+            for (const j of justifs) {
+                const octets = b64VersOctets(j.base64);
+                if (/pdf/.test(j.mimeType)) {
+                    try {
+                        const src = await PDFDocument.load(octets, { ignoreEncryption: true });
+                        const pages = await doc.copyPages(src, src.getPageIndices());
+                        pages.forEach((pg, i) => { doc.addPage(pg); pg.drawText(texteSur(j.legende + (pages.length > 1 ? ' · p.' + (i + 1) : '')), { x: 20, y: 12, size: 8, font, color: rgb(0.3, 0.3, 0.3) }); });
+                    } catch (e) { const pg = doc.addPage(A4); entete(pg, j.legende + ' — PDF illisible, voir Drive'); }
+                    continue;
+                }
+                let image;
+                try { image = /png/.test(j.mimeType) ? await doc.embedPng(octets) : await doc.embedJpg(octets); }
+                catch (e) { const pg = doc.addPage(A4); entete(pg, j.legende + ' — image illisible, voir Drive'); continue; }
+                const page = doc.addPage(A4);
+                entete(page, j.legende);
+                const zw = A4[0] - 2 * M, zh = A4[1] - 2 * M - 34;
+                const k = Math.min(zw / image.width, zh / image.height, 1.5);
+                const w = image.width * k, h = image.height * k;
+                page.drawImage(image, { x: (A4[0] - w) / 2, y: M + (zh - h), width: w, height: h });
+            }
+            return doc.save();
+        }
+
+        async function ouvrirPdf(numero) {
+            const w = window.open('', '_blank'); // ouvert tout de suite, sinon bloqué comme pop-up
+            if (w) w.document.write('<p style="font-family:sans-serif;padding:30px">⏳ Préparation du PDF (feuille + justificatifs)…</p>');
+            const f = FEUILLES.find(x => x.numero === numero);
+            try {
+                const [pdf, justifs] = await Promise.all([api('getPdf', { numero }), api('getJustificatifs', { numero }).catch(() => [])]);
+                let octets = b64VersOctets(pdf.base64), fusion = false;
+                if (justifs.length) {
+                    try {
+                        octets = await fusionnerAvecJustificatifs(pdf.base64, justifs, numero + ' — ' + (f ? f.beneficiaire : ''));
+                        fusion = true;
+                    } catch (e) { toast('Justificatifs non annexés (' + e.message + ') : PDF de la feuille seul.', true); }
+                }
+                const url = URL.createObjectURL(new Blob([octets], { type: 'application/pdf' }));
+                if (w) w.location.href = url; else window.location.href = url;
+                // Archive du « PDF complet » dans Drive (une fois par état de la feuille)
+                if (fusion && !lecture && f) {
+                    const cle = 'pdfComplet_' + numero + '_' + f.statut + '_' + justifs.length;
+                    let dejaFait = false; try { dejaFait = localStorage.getItem(cle) === '1'; } catch (e) {}
+                    if (!dejaFait || !f.pdfComplet) {
+                        api('savePdfComplet', { numero, base64: octetsVersB64(octets) })
+                            .then(r => { f.pdfComplet = r.pdfComplet; try { localStorage.setItem(cle, '1'); } catch (e) {} })
+                            .catch(() => {});
+                    }
+                }
+            } catch (e) {
+                if (w) w.close();
+                if (f && f.pdf) window.open(f.pdf, '_blank'); else toast(e.message, true);
+            }
+        }
+
+        async function signer(numero) {
+            const f = FEUILLES.find(x => x.numero === numero);
+            if (!confirm(`Valider et signer ${numero} (${f ? f.beneficiaire + ', ' + eur(f.total) : ''}) ?\nVotre signature sera apposée dans le cadre « Visa du DDFPT ».`)) return;
+            try { toast('⏳ Signature et génération du PDF…'); await api('signerFeuille', { numero }); toast('Feuille validée et signée ✍️ — PDF prêt à imprimer'); await recharger(); }
+            catch (e) { toast(e.message, true); }
+        }
+
+        async function statut(numero, s) {
+            const msgs = {
+                'Remise compta': `Marquer ${numero} comme remise à la comptabilité (avec les justificatifs) ?`,
+                'Remboursée': `Marquer ${numero} comme remboursée ?`,
+                'Annulée': `Refuser / annuler la feuille ${numero} ?\nSes frais repasseront « En attente » (modifiables).`
+            };
+            if (!confirm(msgs[s])) return;
+            try { await api('setStatutFeuille', { numero, statut: s }); toast('Statut mis à jour'); await recharger(); }
+            catch (e) { toast(e.message, true); }
+        }
+
+        /* ───────── Archive & regroupement ───────── */
+        let archiveRows = [], archiveHeaders = [];
+
+        function renderArchive() {
+            if (!ctx) return;
+            const an = $('arAnnee').value, ty = $('arType').value, si = $('arSite').value, di = $('arDisc').value, ca = $('arCat').value;
+            const q = norm($('arTexte').value), vue = $('arVue').value;
+            let frais = FRAIS.filter(f => f.statut !== 'Annulé' && (!an || f.annee === an) && (!ty || f.type === ty) && (!si || f.site === si) && (!di || f.discipline === di) && (!ca || f.categorie === ca));
+            if (q) frais = frais.filter(f => norm([f.magasin, f.beneficiaire, f.description, f.trajet, f.nature, ...f.articles.map(a => a.designation)].join(' ')).includes(q));
+
+            const total = frais.reduce((s, f) => s + f.montant, 0);
+            const parType = {};
+            frais.forEach(f => parType[f.type] = (parType[f.type] || 0) + f.montant);
+            const km = frais.filter(f => f.type === 'Voiture').reduce((s, f) => s + (Number(f.km) || 0), 0);
+            $('arStats').innerHTML = `<div class="stat"><div class="v">${eur(total)}</div><div class="l">Total</div></div>
+                <div class="stat"><div class="v">${frais.length}</div><div class="l">Frais</div></div>` +
+                Object.entries(parType).map(([t, v]) => `<div class="stat"><div class="v">${eur(v)}</div><div class="l">${esc(t)}</div></div>`).join('') +
+                (km ? `<div class="stat"><div class="v">${Math.round(km).toLocaleString('fr-FR')} km</div><div class="l">Parcourus</div></div>` : '');
+
+            const wrap = $('arTable');
+            if (vue === 'articles') {
+                const g = new Map();
+                frais.filter(f => f.type === 'Achat').forEach(f => f.articles.forEach(a => {
+                    if (q && !norm(a.designation).includes(q) && !norm(f.magasin + ' ' + f.beneficiaire).includes(q)) return;
+                    const k = norm(a.designation);
+                    if (!g.has(k)) g.set(k, { designation: a.designation, achats: 0, qtes: {}, montant: 0, sansPrix: 0, magasins: new Set(), disciplines: new Set(), derniere: '' });
+                    const o = g.get(k);
+                    o.achats++;
+                    if (a.quantite !== '' && a.quantite !== null) { const u = a.unite || 'u.'; o.qtes[u] = (o.qtes[u] || 0) + Number(a.quantite); }
+                    if (a.prix !== '' && a.prix !== null) o.montant += Number(a.prix);
+                    else if (f.articles.length === 1) o.montant += f.montant; else o.sansPrix++;
+                    if (f.magasin) o.magasins.add(f.magasin);
+                    if (f.discipline) o.disciplines.add(f.discipline);
+                    if (f.dateAchat > o.derniere) o.derniere = f.dateAchat;
+                }));
+                const rows = [...g.values()].sort((a, b) => b.montant - a.montant);
+                const qteTxt = o => Object.entries(o.qtes).map(([u, v]) => `${Math.round(v * 100) / 100} ${u}`).join(' + ') || '—';
+                archiveHeaders = ['Article', 'Nb achats', 'Quantité cumulée', 'Montant TTC', 'Magasins', 'Disciplines', 'Dernier achat'];
+                archiveRows = rows.map(o => [o.designation, o.achats, qteTxt(o), o.montant.toFixed(2), [...o.magasins].join(', '), [...o.disciplines].join(', '), frDate(o.derniere)]);
+                wrap.innerHTML = rows.length ? `<table class="data"><thead><tr>${archiveHeaders.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>` +
+                    rows.map(o => `<tr><td><strong>${esc(o.designation)}</strong></td><td class="num">${o.achats}</td><td>${esc(qteTxt(o))}</td>
+                        <td class="num">${eur(o.montant)}${o.sansPrix ? ` <span class="hint" title="Achats sans prix détaillé">(+${o.sansPrix} ?)</span>` : ''}</td>
+                        <td>${esc([...o.magasins].join(', '))}</td><td>${esc([...o.disciplines].join(', '))}</td><td>${frDate(o.derniere)}</td></tr>`).join('') +
+                    '</tbody></table>' : '<div class="empty-msg">Aucun achat pour ces filtres.</div>';
+            } else {
+                archiveHeaders = ['Date', 'N°', 'Type', 'Bénéficiaire', 'Discipline', 'Site', 'Détail', 'Montant TTC', 'Statut', 'Feuille'];
+                archiveRows = frais.map(f => [frDate(f.dateAchat), f.id, f.type + (f.rattacheA ? ' (' + f.rattacheA + ')' : ''), f.beneficiaire, f.discipline, SITES[f.site] || f.site, libelleFrais(f), f.montant.toFixed(2), f.statut, f.feuille]);
+                wrap.innerHTML = frais.length ? `<table class="data"><thead><tr>${archiveHeaders.map(h => `<th>${h}</th>`).join('')}<th></th></tr></thead><tbody>` +
+                    frais.map(f => `<tr><td>${frDate(f.dateAchat)}</td><td>${esc(f.id)}</td><td><span class="tag ${TAGS[f.type]}">${esc(f.type)}</span></td><td>${esc(f.beneficiaire)}</td>
+                        <td>${esc(f.discipline)}</td><td>${esc(SITES[f.site] || f.site)}</td><td>${esc(libelleFrais(f))}</td><td class="num">${eur(f.montant)}</td>
+                        <td><span class="badge ${f.statut === 'Remboursé' ? 'b-remboursee' : f.statut === 'Sur feuille' ? 'b-signee' : 'b-attente'}">${esc(f.statut)}</span></td>
+                        <td>${esc(f.feuille)}</td><td style="white-space:nowrap">${f.photos.length ? liensPhotos(f) : ''}${!lecture && f.statut !== 'Annulé' && !f.rattacheA ? ` <button class="btn-add-photo" onclick="ouvrirAjout('${f.id}')">📷+</button>` : ''}</td></tr>`).join('') +
+                    '</tbody></table>' : '<div class="empty-msg">Aucun frais pour ces filtres.</div>';
+            }
+        }
+
+        function exportCSV() {
+            if (!archiveRows.length) return toast('Rien à exporter.', true);
+            const cell = v => { const s = String(v ?? '').replace(/^(\d+)\.(\d{2})$/, '$1,$2'); return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+            const csv = '﻿' + [archiveHeaders, ...archiveRows].map(r => r.map(cell).join(';')).join('\n');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+            a.download = `frais_${$('arVue').value}_${$('arAnnee').value || 'toutes-annees'}.csv`;
+            a.click();
+        }
+
+        /* ───────── Démarrage ───────── */
+        if (user) {
+            let pane = lecture ? 'attente' : 'saisie';
+            try { const p = localStorage.getItem('fraisPane'); if (p && !(lecture && p === 'saisie')) pane = p; } catch (e) {}
+            showPane(pane);
+            charger();
+        }
+    </script>
+</body>
+</html>
